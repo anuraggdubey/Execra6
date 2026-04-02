@@ -5,7 +5,7 @@ import { ArrowRight, CheckCircle2, Circle, FileText, FolderGit2, Sparkles, X } f
 import ConnectWalletButton from "@/components/wallet/ConnectWalletButton"
 import { useHasMounted } from "@/lib/useHasMounted"
 
-type WorkspaceAgentId = "github" | "coding" | "document"
+type WorkspaceAgentId = "github" | "coding" | "document" | "email"
 
 type WorkspaceOnboardingProps = {
     walletConnected: boolean
@@ -31,6 +31,11 @@ const AGENT_COPY: Record<WorkspaceAgentId, { title: string; body: string; icon: 
         title: "Recommended first run",
         body: "Upload one source document and ask for constraints, requirements, or implementation notes you can act on immediately.",
         icon: FileText,
+    },
+    email: {
+        title: "Recommended first run",
+        body: "Draft one outbound email, confirm the escrow step, and review the generated subject and body before delivery.",
+        icon: Sparkles,
     },
 }
 

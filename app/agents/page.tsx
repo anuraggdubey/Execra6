@@ -14,6 +14,7 @@ import {
     Github,
     Layers3,
     Loader2,
+    Mail,
     Sparkles,
     Upload,
 } from "lucide-react"
@@ -37,7 +38,18 @@ const GitHubAgent = dynamic(() => import("@/components/agents/GitHubAgent"), {
     ),
 })
 
-type WorkspaceAgentId = "github" | "coding" | "document"
+const EmailAgent = dynamic(() => import("@/components/agents/EmailAgent"), {
+    ssr: false,
+    loading: () => (
+        <div className="panel p-6">
+            <div className="skeleton h-6 w-40" />
+            <div className="skeleton mt-4 h-24" />
+            <div className="skeleton mt-4 h-64" />
+        </div>
+    ),
+})
+
+type WorkspaceAgentId = "github" | "coding" | "document" | "email"
 type RunState = "idle" | "running" | "done" | "error"
 
 type AgentDefinition = {
@@ -93,6 +105,13 @@ const AGENTS: AgentDefinition[] = [
         icon: FileText,
         description: "Parse project docs, specs, and datasets into concise analysis the team can use immediately.",
         badge: "Spec digestion",
+    },
+    {
+        id: "email",
+        label: "Email Agent",
+        icon: Mail,
+        description: "Generate outbound emails, verify escrow first, and send through the configured mailbox without leaving the workspace.",
+        badge: "Escrow-backed delivery",
     },
 ]
 
@@ -322,7 +341,7 @@ export default function AgentsPage() {
                     <div>
                         <div className="eyebrow">Web3 MVP workspace</div>
                         <h1 className="mt-1.5 font-heading text-xl font-semibold tracking-[-0.03em] text-foreground sm:mt-2 sm:text-3xl">
-                            Three agents, one surface.
+                            Four agents, one surface.
                         </h1>
                         <p className="page-copy mt-2 hidden sm:block">
                             Focused on GitHub, Coding, and Document agents — your Stellar wallet is the primary identity
@@ -332,7 +351,7 @@ export default function AgentsPage() {
                     <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 sm:mx-0 sm:flex-wrap sm:gap-3 sm:overflow-visible sm:pb-0">
                         <div className="flex min-w-[100px] flex-shrink-0 flex-col gap-0.5 rounded-lg border border-border border-l-[3px] border-l-primary bg-surface-elevated px-3 py-2 sm:min-w-[130px] sm:gap-1 sm:rounded-xl sm:px-4 sm:py-3">
                             <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-muted sm:text-[10px]">Agents</div>
-                            <div className="text-sm font-semibold tracking-tight text-foreground sm:text-base">3</div>
+                            <div className="text-sm font-semibold tracking-tight text-foreground sm:text-base">{AGENTS.length}</div>
                         </div>
                         <div className="flex min-w-[100px] flex-shrink-0 flex-col gap-0.5 rounded-lg border border-border border-l-[3px] border-l-primary bg-surface-elevated px-3 py-2 sm:min-w-[130px] sm:gap-1 sm:rounded-xl sm:px-4 sm:py-3">
                             <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-muted sm:text-[10px]">Wallet</div>
@@ -359,7 +378,7 @@ export default function AgentsPage() {
                     <div>
                         <div className="text-[13px] font-semibold text-foreground sm:text-sm">Connect a Stellar wallet to unlock the agents</div>
                         <p className="mt-0.5 text-xs text-foreground-soft sm:mt-1 sm:text-sm">
-                            GitHub, Coding, and Document actions stay gated until a testnet wallet is connected.
+                            GitHub, Coding, Document, and Email actions stay gated until a testnet wallet is connected.
                         </p>
                     </div>
                     <ConnectWalletButton className="button-primary w-full sm:w-auto" />
@@ -429,6 +448,12 @@ export default function AgentsPage() {
                     {selectedAgent.id === "github" && (
                         <div id="github-setup">
                             <GitHubAgent />
+                        </div>
+                    )}
+
+                    {selectedAgent.id === "email" && (
+                        <div id="email-setup">
+                            <EmailAgent />
                         </div>
                     )}
 

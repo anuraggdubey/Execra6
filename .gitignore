@@ -29,6 +29,7 @@
 .env.production.local
 !.env.example
 !.env*.example
+.env*.local
 
 # Local credential/config files
 .npmrc
@@ -70,6 +71,10 @@ Thumbs.db
 
 # Deployment
 .vercel
+
+# Supabase local state
+supabase/.temp/
+supabase/.branches/
 
 # TypeScript
 *.tsbuildinfo

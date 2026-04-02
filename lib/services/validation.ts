@@ -19,8 +19,20 @@ export function requireNonEmptyText(value: unknown, fieldName: string) {
     return value.trim()
 }
 
+const EMAIL_ADDRESS_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+export function requireEmailAddress(value: unknown, fieldName: string) {
+    const email = requireNonEmptyText(value, fieldName).toLowerCase()
+
+    if (!EMAIL_ADDRESS_REGEX.test(email)) {
+        throw new AgentExecutionError("INVALID_EMAIL", `${fieldName} must be a valid email address.`, 400)
+    }
+
+    return email
+}
+
 export function requireAgentType(value: unknown): AgentType {
-    if (value === "github" || value === "coding" || value === "document") {
+    if (value === "github" || value === "coding" || value === "document" || value === "email") {
         return value
     }
 

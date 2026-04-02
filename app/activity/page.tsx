@@ -9,6 +9,7 @@ import {
     FileText,
     Github,
     Braces,
+    Mail,
     Loader2,
     Search,
     XCircle,
@@ -25,6 +26,7 @@ const AGENT_ICONS: Record<string, React.ElementType> = {
     github: Github,
     coding: Braces,
     document: FileText,
+    email: Mail,
 }
 
 const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string }> = {

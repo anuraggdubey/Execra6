@@ -83,6 +83,15 @@ const PLATFORM_AGENTS: Agent[] = [
         tasksCompleted: 0,
         status: "idle",
     },
+    {
+        id: "email",
+        name: "Email Agent",
+        task: "Generates escrow-gated email drafts and sends them through the configured SMTP mailbox.",
+        reward: 2,
+        earnings: 0,
+        tasksCompleted: 0,
+        status: "idle",
+    },
 ]
 
 const AgentContext = createContext<AgentContextType | undefined>(undefined)
