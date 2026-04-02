@@ -1,0 +1,86 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Test and coverage output
+/coverage
+
+# Next.js and production builds
+/.next/
+/out/
+/build
+.turbo/
+
+# Generated app output
+/projects/
+
+# Environment files and secrets
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+!.env*.example
+
+# Local credential/config files
+.npmrc
+.envrc
+.direnv/
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Logs and local diagnostics
+*.log
+*.out
+*.err
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+build_output.log
+ts_error.txt
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.orig
+*.swp
+*.swo
+*~
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Deployment
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Soroban / Stellar smart contract artifacts
+contracts/**/target/
+contracts/**/*.wasm
+contracts/**/*.d
+contracts/**/Cargo.lock
+.soroban/
+
+# Stale test files
+test-rpc.js
