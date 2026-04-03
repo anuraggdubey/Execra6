@@ -495,7 +495,7 @@ export default function AgentsPage() {
                                 </div>
                             </div>
 
-                            <div className="grid gap-4 p-3 sm:gap-5 sm:p-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+                            <div className="space-y-5 p-3 sm:p-5">
                                 <div className="space-y-4">
                                     <div>
                                         <label className="mb-2 block text-sm font-medium text-foreground">Task prompt</label>
@@ -650,7 +650,7 @@ export default function AgentsPage() {
                                 </div>
                             </div>
 
-                            <div className="grid gap-4 p-3 sm:gap-5 sm:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                            <div className="space-y-5 p-3 sm:p-5">
                                 <div className="space-y-4">
                                     <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-border px-3 py-3 transition-all duration-200 hover:border-primary hover:bg-primary-soft sm:gap-4 sm:rounded-2xl sm:px-5 sm:py-5">
                                         <Upload size={18} className="text-primary" />

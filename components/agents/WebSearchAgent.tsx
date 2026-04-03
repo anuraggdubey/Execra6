@@ -169,7 +169,7 @@ export default function WebSearchAgent() {
                 </div>
             </div>
 
-            <div className="grid gap-4 p-3 sm:gap-5 sm:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div className="space-y-5 p-3 sm:p-5">
                 <div className="space-y-4">
                     <div>
                         <label className="mb-2 block text-sm font-medium text-foreground">Search query</label>
