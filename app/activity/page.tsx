@@ -10,6 +10,7 @@ import {
     Github,
     Braces,
     Mail,
+    Globe2,
     Loader2,
     Search,
     XCircle,
@@ -27,6 +28,7 @@ const AGENT_ICONS: Record<string, React.ElementType> = {
     coding: Braces,
     document: FileText,
     email: Mail,
+    search: Globe2,
 }
 
 const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string }> = {

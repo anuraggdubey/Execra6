@@ -204,3 +204,62 @@ fn extend_persistent(env: &Env, key: &DataKey) {
         .persistent()
         .extend_ttl(key, PERSISTENT_BUMP_THRESHOLD, PERSISTENT_BUMP_AMOUNT);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use soroban_sdk::{testutils::Address as _, token};
+
+    fn setup() -> (Env, TaskEscrowContractClient<'static>, Address, Address, Address) {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let admin = Address::generate(&env);
+        let user = Address::generate(&env);
+
+        let sac = env.register_stellar_asset_contract_v2(admin.clone());
+        let sac_address = sac.address();
+        let sac_admin = token::StellarAssetClient::new(&env, &sac_address);
+        sac_admin.mint(&user, &10_000_000i128);
+
+        let contract_id = env.register(TaskEscrowContract, ());
+        let client = TaskEscrowContractClient::new(&env, &contract_id);
+        client.init(&admin, &sac_address);
+
+        (env, client, admin, user, sac_address)
+    }
+
+    #[test]
+    fn creates_email_task_with_pending_status() {
+        let (env, client, _admin, user, sac_address) = setup();
+        let token_client = token::Client::new(&env, &sac_address);
+        let reward = 1_250_000i128;
+
+        client.create_task(&1u64, &user, &Symbol::new(&env, "email"), &reward);
+
+        let task = client.get_task(&1u64);
+        assert!(task.task_id == 1u64);
+        assert!(task.user == user);
+        assert!(task.agent_type == Symbol::new(&env, "email"));
+        assert!(task.reward == reward);
+        assert!(task.status == TaskStatus::Pending);
+        assert!(token_client.balance(&user) == 8_750_000i128);
+    }
+
+    #[test]
+    fn creates_search_task_with_pending_status() {
+        let (env, client, _admin, user, sac_address) = setup();
+        let token_client = token::Client::new(&env, &sac_address);
+        let reward = 2_000_000i128;
+
+        client.create_task(&2u64, &user, &Symbol::new(&env, "search"), &reward);
+
+        let task = client.get_task(&2u64);
+        assert!(task.task_id == 2u64);
+        assert!(task.user == user);
+        assert!(task.agent_type == Symbol::new(&env, "search"));
+        assert!(task.reward == reward);
+        assert!(task.status == TaskStatus::Pending);
+        assert!(token_client.balance(&user) == 8_000_000i128);
+    }
+}

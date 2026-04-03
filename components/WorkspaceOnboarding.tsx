@@ -5,7 +5,7 @@ import { ArrowRight, CheckCircle2, Circle, FileText, FolderGit2, Sparkles, X } f
 import ConnectWalletButton from "@/components/wallet/ConnectWalletButton"
 import { useHasMounted } from "@/lib/useHasMounted"
 
-type WorkspaceAgentId = "github" | "coding" | "document" | "email"
+type WorkspaceAgentId = "github" | "coding" | "document" | "email" | "search"
 
 type WorkspaceOnboardingProps = {
     walletConnected: boolean
@@ -37,6 +37,11 @@ const AGENT_COPY: Record<WorkspaceAgentId, { title: string; body: string; icon: 
         body: "Draft one outbound email, confirm the escrow step, and review the generated subject and body before delivery.",
         icon: Sparkles,
     },
+    search: {
+        title: "Recommended first run",
+        body: "Ask one focused question, verify the escrow step, and review the returned summary, sources, and optional videos.",
+        icon: Sparkles,
+    },
 }
 
 export default function WorkspaceOnboarding({
@@ -62,7 +67,7 @@ export default function WorkspaceOnboarding({
                 detail:
                     selectedAgentId === "github"
                         ? "GitHub Agent needs a linked GitHub session before repository indexing can start."
-                        : "Coding and Document workflows are ready once the current agent and its inputs are confirmed.",
+                        : "The selected workflow is ready once the current agent inputs are confirmed.",
                 complete: workflowReady,
             },
             {

@@ -92,6 +92,15 @@ const PLATFORM_AGENTS: Agent[] = [
         tasksCompleted: 0,
         status: "idle",
     },
+    {
+        id: "search",
+        name: "Web Search Agent",
+        task: "Verifies escrow on-chain, runs web search, and returns summarized source-backed results with optional videos.",
+        reward: 2,
+        earnings: 0,
+        tasksCompleted: 0,
+        status: "idle",
+    },
 ]
 
 const AgentContext = createContext<AgentContextType | undefined>(undefined)

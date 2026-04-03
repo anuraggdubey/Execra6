@@ -11,6 +11,7 @@ import {
     ExternalLink,
     FileCode2,
     FileText,
+    Globe2,
     Github,
     Layers3,
     Loader2,
@@ -49,7 +50,18 @@ const EmailAgent = dynamic(() => import("@/components/agents/EmailAgent"), {
     ),
 })
 
-type WorkspaceAgentId = "github" | "coding" | "document" | "email"
+const WebSearchAgent = dynamic(() => import("@/components/agents/WebSearchAgent"), {
+    ssr: false,
+    loading: () => (
+        <div className="panel p-6">
+            <div className="skeleton h-6 w-40" />
+            <div className="skeleton mt-4 h-24" />
+            <div className="skeleton mt-4 h-64" />
+        </div>
+    ),
+})
+
+type WorkspaceAgentId = "github" | "coding" | "document" | "email" | "search"
 type RunState = "idle" | "running" | "done" | "error"
 
 type AgentDefinition = {
@@ -112,6 +124,13 @@ const AGENTS: AgentDefinition[] = [
         icon: Mail,
         description: "Generate outbound emails, verify escrow first, and send through the configured mailbox without leaving the workspace.",
         badge: "Escrow-backed delivery",
+    },
+    {
+        id: "search",
+        label: "Web Search Agent",
+        icon: Globe2,
+        description: "Run escrow-gated web searches, summarize source-backed results, and surface optional related videos.",
+        badge: "Live web research",
     },
 ]
 
@@ -341,7 +360,7 @@ export default function AgentsPage() {
                     <div>
                         <div className="eyebrow">Web3 MVP workspace</div>
                         <h1 className="mt-1.5 font-heading text-xl font-semibold tracking-[-0.03em] text-foreground sm:mt-2 sm:text-3xl">
-                            Four agents, one surface.
+                            Five agents, one surface.
                         </h1>
                         <p className="page-copy mt-2 hidden sm:block">
                             Focused on GitHub, Coding, and Document agents — your Stellar wallet is the primary identity
@@ -378,7 +397,7 @@ export default function AgentsPage() {
                     <div>
                         <div className="text-[13px] font-semibold text-foreground sm:text-sm">Connect a Stellar wallet to unlock the agents</div>
                         <p className="mt-0.5 text-xs text-foreground-soft sm:mt-1 sm:text-sm">
-                            GitHub, Coding, Document, and Email actions stay gated until a testnet wallet is connected.
+                            GitHub, Coding, Document, Email, and Web Search actions stay gated until a testnet wallet is connected.
                         </p>
                     </div>
                     <ConnectWalletButton className="button-primary w-full sm:w-auto" />
@@ -454,6 +473,12 @@ export default function AgentsPage() {
                     {selectedAgent.id === "email" && (
                         <div id="email-setup">
                             <EmailAgent />
+                        </div>
+                    )}
+
+                    {selectedAgent.id === "search" && (
+                        <div id="search-setup">
+                            <WebSearchAgent />
                         </div>
                     )}
 

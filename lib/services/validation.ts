@@ -32,7 +32,7 @@ export function requireEmailAddress(value: unknown, fieldName: string) {
 }
 
 export function requireAgentType(value: unknown): AgentType {
-    if (value === "github" || value === "coding" || value === "document" || value === "email") {
+    if (value === "github" || value === "coding" || value === "document" || value === "email" || value === "search") {
         return value
     }
 

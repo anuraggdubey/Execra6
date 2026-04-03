@@ -1,4 +1,4 @@
-export type AgentType = "github" | "coding" | "document" | "email"
+export type AgentType = "github" | "coding" | "document" | "email" | "search"
 
 export type TaskStatus = "pending" | "completed" | "failed"
 export type OnChainTaskStatus = "uninitialized" | "pending" | "completed" | "cancelled" | "failed"

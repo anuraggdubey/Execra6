@@ -20,6 +20,10 @@ This contract escrows native Stellar value through the Stellar Asset Contract (S
 - `get_admin()`
 - `get_token()`
 
+## Agent Types
+
+The contract is agent-agnostic on-chain. `create_task` accepts `agent_type: Symbol`, so the same escrow contract supports `github`, `coding`, `document`, `email`, `search`, and future agent identifiers without changing the ABI.
+
 ## Soroban CLI Flow
 
 Build and optimize:
