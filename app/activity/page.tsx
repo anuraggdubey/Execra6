@@ -11,6 +11,7 @@ import {
     Braces,
     Mail,
     Globe2,
+    MonitorPlay,
     Loader2,
     Search,
     XCircle,
@@ -29,6 +30,7 @@ const AGENT_ICONS: Record<string, React.ElementType> = {
     document: FileText,
     email: Mail,
     search: Globe2,
+    browser: MonitorPlay,
 }
 
 const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string }> = {

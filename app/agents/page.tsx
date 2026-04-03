@@ -16,6 +16,7 @@ import {
     Layers3,
     Loader2,
     Mail,
+    MonitorPlay,
     Sparkles,
     Upload,
 } from "lucide-react"
@@ -61,7 +62,18 @@ const WebSearchAgent = dynamic(() => import("@/components/agents/WebSearchAgent"
     ),
 })
 
-type WorkspaceAgentId = "github" | "coding" | "document" | "email" | "search"
+const BrowserAgent = dynamic(() => import("@/components/agents/BrowserAgent"), {
+    ssr: false,
+    loading: () => (
+        <div className="panel p-6">
+            <div className="skeleton h-6 w-40" />
+            <div className="skeleton mt-4 h-24" />
+            <div className="skeleton mt-4 h-64" />
+        </div>
+    ),
+})
+
+type WorkspaceAgentId = "github" | "coding" | "document" | "email" | "search" | "browser"
 type RunState = "idle" | "running" | "done" | "error"
 
 type AgentDefinition = {
@@ -131,6 +143,13 @@ const AGENTS: AgentDefinition[] = [
         icon: Globe2,
         description: "Run escrow-gated web searches, summarize source-backed results, and surface optional related videos.",
         badge: "Live web research",
+    },
+    {
+        id: "browser",
+        label: "Browser Automation Agent",
+        icon: MonitorPlay,
+        description: "Launch a visible browser, execute planned web actions, and stream live execution logs after escrow verification.",
+        badge: "Live browser control",
     },
 ]
 
@@ -360,7 +379,7 @@ export default function AgentsPage() {
                     <div>
                         <div className="eyebrow">Web3 MVP workspace</div>
                         <h1 className="mt-1.5 font-heading text-xl font-semibold tracking-[-0.03em] text-foreground sm:mt-2 sm:text-3xl">
-                            Five agents, one surface.
+                            Six agents, one surface.
                         </h1>
                         <p className="page-copy mt-2 hidden sm:block">
                             Focused on GitHub, Coding, and Document agents — your Stellar wallet is the primary identity
@@ -397,7 +416,7 @@ export default function AgentsPage() {
                     <div>
                         <div className="text-[13px] font-semibold text-foreground sm:text-sm">Connect a Stellar wallet to unlock the agents</div>
                         <p className="mt-0.5 text-xs text-foreground-soft sm:mt-1 sm:text-sm">
-                            GitHub, Coding, Document, Email, and Web Search actions stay gated until a testnet wallet is connected.
+                            GitHub, Coding, Document, Email, Web Search, and Browser actions stay gated until a testnet wallet is connected.
                         </p>
                     </div>
                     <ConnectWalletButton className="button-primary w-full sm:w-auto" />
@@ -479,6 +498,12 @@ export default function AgentsPage() {
                     {selectedAgent.id === "search" && (
                         <div id="search-setup">
                             <WebSearchAgent />
+                        </div>
+                    )}
+
+                    {selectedAgent.id === "browser" && (
+                        <div id="browser-setup">
+                            <BrowserAgent />
                         </div>
                     )}
 

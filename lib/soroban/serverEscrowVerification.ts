@@ -50,7 +50,7 @@ function requireEscrowPayload(value: unknown): EscrowBlockchainPayload {
     ) {
         throw new AgentExecutionError(
             "ESCROW_VERIFICATION_FAILED",
-            "A confirmed escrow payload is required before the Web Search Agent can run.",
+            "A confirmed escrow payload is required before the agent can run.",
             403
         )
     }

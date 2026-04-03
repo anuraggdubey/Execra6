@@ -101,6 +101,15 @@ const PLATFORM_AGENTS: Agent[] = [
         tasksCompleted: 0,
         status: "idle",
     },
+    {
+        id: "browser",
+        name: "Browser Automation Agent",
+        task: "Verifies escrow, launches a visible browser, executes browser actions, and streams live activity back into the workspace.",
+        reward: 3,
+        earnings: 0,
+        tasksCompleted: 0,
+        status: "idle",
+    },
 ]
 
 const AgentContext = createContext<AgentContextType | undefined>(undefined)

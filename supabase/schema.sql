@@ -12,7 +12,7 @@ create index if not exists users_wallet_address_idx on public.users (wallet_addr
 create table if not exists public.tasks (
     id uuid primary key default gen_random_uuid(),
     wallet_address text not null,
-    agent_type text not null check (agent_type in ('github', 'coding', 'document', 'email', 'search')),
+    agent_type text not null check (agent_type in ('github', 'coding', 'document', 'email', 'search', 'browser')),
     input_prompt text not null,
     output_result jsonb,
     status text not null check (status in ('pending', 'completed', 'failed')),
@@ -69,5 +69,5 @@ using (false)
 with check (false);
 
 comment on table public.users is 'Wallet-identified users. Ready to map to authenticated wallet claims later.';
-comment on table public.tasks is 'Agent task history persisted for GitHub, coding, document, email, and web search flows.';
+comment on table public.tasks is 'Agent task history persisted for GitHub, coding, document, email, web search, and browser automation flows.';
 comment on table public.agent_runs is 'Execution metadata and logs for individual task runs.';

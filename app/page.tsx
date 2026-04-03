@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight, Braces, FileText, Github, Globe2 } from "lucide-react"
+import { ArrowRight, Braces, FileText, Github, Globe2, Mail, MonitorPlay } from "lucide-react"
 import ConnectWalletButton from "@/components/wallet/ConnectWalletButton"
 import { useWalletContext } from "@/lib/WalletContext"
 import { useHasMounted } from "@/lib/useHasMounted"
@@ -10,7 +10,9 @@ const AGENTS = [
     { label: "GitHub Agent", icon: Github },
     { label: "Coding Agent", icon: Braces },
     { label: "Document Agent", icon: FileText },
+    { label: "Email Agent", icon: Mail },
     { label: "Web Search Agent", icon: Globe2 },
+    { label: "Browser Agent", icon: MonitorPlay },
 ]
 
 export default function Home() {
@@ -52,7 +54,7 @@ export default function Home() {
                         Web3 identity first, agent workspace second.
                     </h1>
                     <p className="mx-auto mt-4 max-w-lg text-[15px] leading-relaxed text-foreground-soft sm:text-base">
-                        Connect a Stellar testnet wallet to use the GitHub, Coding, Document, and Web Search agents with a cleaner
+                        Connect a Stellar testnet wallet to use the GitHub, Coding, Document, Email, Web Search, and Browser agents with a cleaner
                         identity model that is ready for smart contract integration.
                     </p>
 

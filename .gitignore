@@ -19,6 +19,8 @@
 
 # Generated app output
 /projects/
+/public/browser-agent/
+/.artifacts/
 
 # Environment files and secrets
 .env
