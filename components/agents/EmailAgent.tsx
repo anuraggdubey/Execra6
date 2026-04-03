@@ -226,7 +226,8 @@ export default function EmailAgent() {
             </div>
 
             <div className="space-y-5 p-3 sm:p-5">
-                <div className="space-y-4">
+                <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)] xl:items-start">
+                <div className="w-full max-w-3xl space-y-4 rounded-xl border border-border bg-surface p-3 sm:rounded-2xl sm:p-5">
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div>
                             <label className="mb-2 block text-sm font-medium text-foreground">Sender email</label>
@@ -390,6 +391,26 @@ export default function EmailAgent() {
                             Connect a wallet before generating a preview so the email agent can create escrow and confirm on-chain after the draft is produced.
                         </div>
                     )}
+                </div>
+
+                <div className="hidden space-y-4 xl:sticky xl:top-4 xl:block">
+                    <div className="rounded-xl border border-border bg-surface p-4">
+                        <div className="eyebrow">Flow</div>
+                        <div className="mt-1 text-sm font-semibold text-foreground">Draft before delivery</div>
+                        <p className="mt-2 text-sm leading-relaxed text-foreground-soft">
+                            Generate the preview first, review the language, then either download it, open Gmail, or send through the platform mailbox.
+                        </p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-surface p-4">
+                        <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Escrow</div>
+                        <div className="mt-2 text-sm text-foreground-soft">
+                            Reward: <span className="font-semibold text-foreground">{rewardXlm} XLM</span>
+                        </div>
+                        <div className="mt-1 text-sm text-foreground-soft">
+                            Status: <span className="font-semibold text-foreground">{runState === "generating" ? "Generating preview" : runState === "preview-ready" ? "Preview ready" : runState === "sending" ? "Sending" : runState === "sent" ? "Sent" : runState === "error" ? "Needs attention" : "Idle"}</span>
+                        </div>
+                    </div>
+                </div>
                 </div>
 
                 <div className="space-y-4 rounded-xl border border-border bg-surface p-3 sm:rounded-2xl sm:p-5">

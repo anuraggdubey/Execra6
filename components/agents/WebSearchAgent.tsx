@@ -170,7 +170,8 @@ export default function WebSearchAgent() {
             </div>
 
             <div className="space-y-5 p-3 sm:p-5">
-                <div className="space-y-4">
+                <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)] xl:items-start">
+                <div className="w-full max-w-3xl space-y-4 rounded-xl border border-border bg-surface p-3 sm:rounded-2xl sm:p-5">
                     <div>
                         <label className="mb-2 block text-sm font-medium text-foreground">Search query</label>
                         <textarea
@@ -268,6 +269,26 @@ export default function WebSearchAgent() {
                             Connect a wallet before searching so the agent can verify escrow on-chain.
                         </div>
                     )}
+                </div>
+
+                <div className="hidden space-y-4 xl:sticky xl:top-4 xl:block">
+                    <div className="rounded-xl border border-border bg-surface p-4">
+                        <div className="eyebrow">Research Mode</div>
+                        <div className="mt-1 text-sm font-semibold text-foreground">Source-backed only</div>
+                        <p className="mt-2 text-sm leading-relaxed text-foreground-soft">
+                            The summary is built only from fetched search results and optional video links, keeping the output tighter and easier to trust.
+                        </p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-surface p-4">
+                        <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Escrow</div>
+                        <div className="mt-2 text-sm text-foreground-soft">
+                            Reward: <span className="font-semibold text-foreground">{rewardXlm} XLM</span>
+                        </div>
+                        <div className="mt-1 text-sm text-foreground-soft">
+                            Status: <span className="font-semibold text-foreground">{runState === "running" ? "Searching" : runState === "done" ? "Ready to confirm" : runState === "error" ? "Needs attention" : "Idle"}</span>
+                        </div>
+                    </div>
+                </div>
                 </div>
 
                 <div className="space-y-4 rounded-xl border border-border bg-surface p-3 sm:rounded-2xl sm:p-5">

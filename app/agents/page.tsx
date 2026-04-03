@@ -496,7 +496,8 @@ export default function AgentsPage() {
                             </div>
 
                             <div className="space-y-5 p-3 sm:p-5">
-                                <div className="space-y-4">
+                                <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)] xl:items-start">
+                                <div className="w-full max-w-3xl space-y-4 rounded-xl border border-border bg-surface p-3 sm:rounded-2xl sm:p-5">
                                     <div>
                                         <label className="mb-2 block text-sm font-medium text-foreground">Task prompt</label>
                                         <textarea
@@ -569,6 +570,26 @@ export default function AgentsPage() {
                                             Connect a wallet before generating code artifacts.
                                         </div>
                                     )}
+                                </div>
+
+                                <div className="hidden space-y-4 xl:sticky xl:top-4 xl:block">
+                                    <div className="rounded-xl border border-border bg-surface p-4">
+                                        <div className="eyebrow">Workflow</div>
+                                        <div className="mt-1 text-sm font-semibold text-foreground">Build delivery</div>
+                                        <p className="mt-2 text-sm leading-relaxed text-foreground-soft">
+                                            Keep prompts narrow and outcome-focused so the generated preview, bundle, and file set stay clean and production-lean.
+                                        </p>
+                                    </div>
+                                    <div className="rounded-xl border border-border bg-surface p-4">
+                                        <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Escrow</div>
+                                        <div className="mt-2 text-sm text-foreground-soft">
+                                            Reward: <span className="font-semibold text-foreground">{codingRewardXlm} XLM</span>
+                                        </div>
+                                        <div className="mt-1 text-sm text-foreground-soft">
+                                            Status: <span className="font-semibold text-foreground">{codingState === "running" ? "In progress" : codingState === "done" ? "Ready to confirm" : codingState === "error" ? "Needs attention" : "Idle"}</span>
+                                        </div>
+                                    </div>
+                                </div>
                                 </div>
 
                                 <div className="space-y-4 rounded-xl border border-border bg-surface p-3 sm:rounded-2xl sm:p-5">
@@ -651,7 +672,8 @@ export default function AgentsPage() {
                             </div>
 
                             <div className="space-y-5 p-3 sm:p-5">
-                                <div className="space-y-4">
+                                <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)] xl:items-start">
+                                <div className="w-full max-w-3xl space-y-4 rounded-xl border border-border bg-surface p-3 sm:rounded-2xl sm:p-5">
                                     <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-border px-3 py-3 transition-all duration-200 hover:border-primary hover:bg-primary-soft sm:gap-4 sm:rounded-2xl sm:px-5 sm:py-5">
                                         <Upload size={18} className="text-primary" />
                                         <div>
@@ -726,6 +748,26 @@ export default function AgentsPage() {
                                             Connect a wallet before uploading and analyzing documents.
                                         </div>
                                     )}
+                                </div>
+
+                                <div className="hidden space-y-4 xl:sticky xl:top-4 xl:block">
+                                    <div className="rounded-xl border border-border bg-surface p-4">
+                                        <div className="eyebrow">Best Input</div>
+                                        <div className="mt-1 text-sm font-semibold text-foreground">Focused analysis</div>
+                                        <p className="mt-2 text-sm leading-relaxed text-foreground-soft">
+                                            Upload one source file, then ask a single practical question around requirements, constraints, or implementation decisions.
+                                        </p>
+                                    </div>
+                                    <div className="rounded-xl border border-border bg-surface p-4">
+                                        <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Escrow</div>
+                                        <div className="mt-2 text-sm text-foreground-soft">
+                                            Reward: <span className="font-semibold text-foreground">{documentRewardXlm} XLM</span>
+                                        </div>
+                                        <div className="mt-1 text-sm text-foreground-soft">
+                                            Status: <span className="font-semibold text-foreground">{documentState === "running" ? "Analyzing" : documentState === "done" ? "Ready to confirm" : documentState === "error" ? "Needs attention" : "Idle"}</span>
+                                        </div>
+                                    </div>
+                                </div>
                                 </div>
 
                                 <div className="space-y-4 rounded-xl border border-border bg-surface p-3 sm:rounded-2xl sm:p-5">
