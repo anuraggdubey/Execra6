@@ -1,11 +1,11 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { AlertCircle, CheckCircle2, Globe, Loader2, MonitorPlay, PlaySquare, ShieldCheck, TerminalSquare } from "lucide-react"
+import { AlertCircle, Globe, Loader2, MonitorPlay, PlaySquare, ShieldCheck } from "lucide-react"
 import { useAgentContext } from "@/lib/AgentContext"
 import { useWalletContext } from "@/lib/WalletContext"
 import { finalizeEscrowedTask, prepareEscrowedTask, rollbackEscrowedTask } from "@/lib/soroban/taskLifecycle"
-import type { BrowserAgentLog, ExecutedBrowserStep } from "@/lib/services/browserSessionStore"
+import type { BrowserStructuredResult } from "@/lib/services/browserSessionStore"
 
 type RunState = "idle" | "running" | "done" | "error"
 
@@ -14,10 +14,7 @@ type BrowserAgentResponse = {
     taskId: string
     sessionId: string
     transactionVerified: boolean
-    plannedSteps?: Array<{ action: string; detail: string }>
-    stepsExecuted: ExecutedBrowserStep[]
-    result: string
-    logs: BrowserAgentLog[]
+    result: BrowserStructuredResult
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -36,10 +33,7 @@ export default function BrowserAgent() {
     const [runState, setRunState] = useState<RunState>("idle")
     const [error, setError] = useState<string | null>(null)
     const [txState, setTxState] = useState<string | null>(null)
-    const [logs, setLogs] = useState<BrowserAgentLog[]>([])
-    const [plannedSteps, setPlannedSteps] = useState<Array<{ action: string; detail: string }>>([])
-    const [stepsExecuted, setStepsExecuted] = useState<ExecutedBrowserStep[]>([])
-    const [result, setResult] = useState<string | null>(null)
+    const [result, setResult] = useState<BrowserStructuredResult | null>(null)
     const [sessionId, setSessionId] = useState<string | null>(null)
     const eventSourceRef = useRef<EventSource | null>(null)
 
@@ -60,19 +54,12 @@ export default function BrowserAgent() {
         source.onmessage = (event) => {
             const data = JSON.parse(event.data) as
                 | { type: "connected" }
-                | { type: "log"; log: BrowserAgentLog }
-                | { type: "done"; result: { plannedSteps?: Array<{ action: string; detail: string }>; stepsExecuted: ExecutedBrowserStep[]; result: string; logs: BrowserAgentLog[] } }
+                | { type: "log" }
+                | { type: "done"; result: { result: BrowserStructuredResult } }
                 | { type: "error"; error: string }
 
-            if (data.type === "log") {
-                setLogs((prev) => [...prev, data.log])
-            }
-
             if (data.type === "done") {
-                setPlannedSteps(data.result.plannedSteps ?? [])
-                setStepsExecuted(data.result.stepsExecuted)
                 setResult(data.result.result)
-                setLogs(data.result.logs)
                 source.close()
             }
 
@@ -95,9 +82,6 @@ export default function BrowserAgent() {
         setRunState("running")
         setError(null)
         setResult(null)
-        setLogs([])
-        setPlannedSteps([])
-        setStepsExecuted([])
         setTxState("Creating escrow transaction on Soroban...")
         connectLogStream(nextSessionId)
         startAgentRun("browser", `Running browser workflow: ${instruction.trim()}`)
@@ -129,11 +113,8 @@ export default function BrowserAgent() {
                 throw new Error(data.error ?? "Browser automation failed")
             }
 
-            setStepsExecuted(data.stepsExecuted)
-            setPlannedSteps(data.plannedSteps ?? [])
             setResult(data.result)
-            setLogs(data.logs)
-            setTxState("Finalizing escrow — confirming on-chain...")
+            setTxState("Finalizing escrow and confirming on-chain...")
 
             const finalizeResult = await finalizeEscrowedTask({
                 taskId: data.taskId,
@@ -143,9 +124,9 @@ export default function BrowserAgent() {
                 blockchainPayload: preparedTask.blockchainPayload,
             })
 
-            setTxState(`On-chain confirmed ✓ (TX: ${finalizeResult.txHash.slice(0, 8)}...)`)
+            setTxState(`On-chain confirmed (TX: ${finalizeResult.txHash.slice(0, 8)}...)`)
             setRunState("done")
-            completeAgentRun("browser", `Completed ${data.stepsExecuted.length} visible browser step${data.stepsExecuted.length === 1 ? "" : "s"}.`)
+            completeAgentRun("browser", "Completed browser workflow.")
         } catch (error: unknown) {
             const message = getErrorMessage(error, "Browser automation failed")
             setError(message)
@@ -170,7 +151,7 @@ export default function BrowserAgent() {
                 <div>
                     <div className="eyebrow">Browser Automation Agent</div>
                     <h2 className="mt-0.5 text-base font-semibold tracking-tight text-foreground sm:mt-1 sm:text-lg">
-                        Visible browser workflows with live logs
+                        Visible browser workflows with clean final answers
                     </h2>
                 </div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5 text-[11px] font-semibold text-primary">
@@ -190,7 +171,7 @@ export default function BrowserAgent() {
                                 onChange={(event) => setInstruction(event.target.value)}
                                 rows={7}
                                 disabled={locked}
-                                placeholder='Open https://example.com, search for pricing, and extract the main plan names.'
+                                placeholder="Open https://example.com, find pricing, and tell me the main plans."
                                 className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
                             />
                         </div>
@@ -224,9 +205,6 @@ export default function BrowserAgent() {
                                     setError(null)
                                     setRunState("idle")
                                     setTxState(null)
-                                    setLogs([])
-                                    setPlannedSteps([])
-                                    setStepsExecuted([])
                                     setResult(null)
                                     setSessionId(null)
                                     eventSourceRef.current?.close()
@@ -262,10 +240,10 @@ export default function BrowserAgent() {
 
                     <div className="hidden space-y-4 xl:sticky xl:top-4 xl:block">
                         <div className="rounded-xl border border-border bg-surface p-4">
-                            <div className="eyebrow">Execution</div>
-                            <div className="mt-1 text-sm font-semibold text-foreground">Visible browser</div>
+                            <div className="eyebrow">Output</div>
+                            <div className="mt-1 text-sm font-semibold text-foreground">Clean result cards</div>
                             <p className="mt-2 text-sm leading-relaxed text-foreground-soft">
-                                Use explicit instructions with a website URL and a short sequence of actions for the most reliable browser plan.
+                                The browser agent now focuses on a structured final answer instead of exposing step-by-step internals.
                             </p>
                         </div>
                         <div className="rounded-xl border border-border bg-surface p-4">
@@ -283,8 +261,8 @@ export default function BrowserAgent() {
                 <div className="space-y-4 rounded-xl border border-border bg-surface p-3 sm:rounded-2xl sm:p-5">
                     <div className="flex items-center justify-between">
                         <div>
-                            <div className="eyebrow">Live Activity</div>
-                            <div className="mt-1 text-sm font-semibold text-foreground">Step-by-step browser output</div>
+                            <div className="eyebrow">Final Output</div>
+                            <div className="mt-1 text-sm font-semibold text-foreground">Structured browser result</div>
                         </div>
                         <span className={`rounded-full px-3 py-1 text-xs font-medium ${
                             runState === "running" ? "bg-primary-soft text-primary" :
@@ -296,139 +274,100 @@ export default function BrowserAgent() {
                         </span>
                     </div>
 
-                    {runState === "running" && logs.length === 0 && (
+                    {runState === "running" && !result && (
                         <div className="rounded-xl border border-border bg-background p-4">
                             <div className="flex items-center gap-2 text-sm text-foreground-soft">
                                 <Loader2 size={15} className="animate-spin text-primary" />
-                                Waiting for browser activity...
+                                Preparing your structured result...
                             </div>
                         </div>
                     )}
 
-                    {logs.length === 0 && runState !== "running" && !result && (
+                    {!result && runState !== "running" && (
                         <div className="rounded-xl border border-dashed border-border bg-background px-4 py-10 text-center">
                             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary">
                                 <PlaySquare size={20} />
                             </div>
-                            <div className="mt-4 text-sm font-semibold text-foreground">No browser run yet</div>
+                            <div className="mt-4 text-sm font-semibold text-foreground">No browser result yet</div>
                             <p className="mt-2 text-sm leading-relaxed text-foreground-soft">
-                                Start a browser task to stream execution logs, see completed steps, and review the final extracted result.
+                                Start a browser task to get a clean summary, details, key points, searched query, and suggestions.
                             </p>
                         </div>
                     )}
 
-                    {logs.length > 0 && (
-                        <div className="rounded-xl border border-border bg-background p-4">
-                            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
-                                <TerminalSquare size={14} />
-                                Live logs
-                            </div>
-                            <div className="space-y-2">
-                                {logs.map((log) => (
-                                    <div key={log.id} className="flex items-start gap-3 rounded-lg border border-border/70 px-3 py-2 text-sm">
-                                        <span className={`mt-0.5 h-2 w-2 rounded-full ${
-                                            log.level === "success" ? "bg-emerald-500" :
-                                            log.level === "error" ? "bg-red-500" :
-                                            "bg-primary"
-                                        }`} />
-                                        <div className="min-w-0">
-                                            <div className="text-foreground-soft">{log.message}</div>
-                                            <div className="mt-1 text-[11px] text-muted">{new Date(log.timestamp).toLocaleTimeString()}</div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {plannedSteps.length > 0 && (
-                        <div className="rounded-xl border border-border bg-background p-4">
-                            <div className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-muted">Planned steps</div>
-                            <div className="space-y-2">
-                                {plannedSteps.map((step, index) => (
-                                    <div key={`${step.action}-${index}`} className="rounded-lg border border-border/70 px-3 py-3 text-sm">
-                                        <div className="font-semibold text-foreground">{index + 1}. {step.action}</div>
-                                        {step.detail && <div className="mt-1 break-all text-foreground-soft">{step.detail}</div>}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {stepsExecuted.length > 0 && (
-                        <div className="rounded-xl border border-border bg-background p-4">
-                            <div className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-muted">Executed steps</div>
-                            <div className="space-y-2">
-                                {stepsExecuted.map((step, index) => (
-                                    <div key={`${step.action}-${index}`} className="rounded-lg border border-border/70 px-3 py-3 text-sm">
-                                        <div className="flex items-center gap-2 font-semibold text-foreground">
-                                            <CheckCircle2 size={14} className={step.status === "completed" ? "text-emerald-500" : "text-red-500"} />
-                                            <span>{step.action}</span>
-                                        </div>
-                                        <div className="mt-1 text-foreground-soft">{step.detail}</div>
-                                        {step.extractedText && (
-                                            <div className="mt-2 rounded-lg bg-surface px-3 py-2 text-foreground-soft">{step.extractedText}</div>
-                                        )}
-                                        {step.screenshotUrl && (
-                                            <div className="mt-3 space-y-2">
-                                                <a
-                                                    href={step.screenshotUrl}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="inline-block text-xs font-medium text-primary hover:underline"
-                                                >
-                                                    Open screenshot
-                                                </a>
-                                                <div className="overflow-hidden rounded-lg border border-border bg-surface">
-                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                    <img
-                                                        src={step.screenshotUrl}
-                                                        alt="Browser automation screenshot"
-                                                        className="h-auto w-full object-cover"
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-                                        {!step.screenshotUrl && step.screenshotPath && (
-                                            <div className="mt-2 text-xs text-foreground-soft">Screenshot: {step.screenshotPath}</div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
                     {result && (
-                        <div className="rounded-xl border border-border bg-background p-4">
-                            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
-                                <Globe size={14} />
-                                Final result
+                        <div className="grid gap-4 lg:grid-cols-2">
+                            <div className="rounded-xl border border-border bg-background p-4 lg:col-span-2">
+                                <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+                                    <Globe size={14} />
+                                    Summary
+                                </div>
+                                <div className="text-sm leading-relaxed text-foreground">{result.summary}</div>
                             </div>
-                            <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground-soft">{result}</pre>
+
+                            <div className="rounded-xl border border-border bg-background p-4">
+                                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Searched Query</div>
+                                <div className="mt-3 rounded-lg bg-surface px-3 py-2 text-sm text-foreground">{result.searchedQuery}</div>
+                            </div>
+
+                            <div className="rounded-xl border border-border bg-background p-4">
+                                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Details</div>
+                                <div className="mt-3 text-sm leading-relaxed text-foreground-soft">{result.details}</div>
+                            </div>
+
+                            <div className="rounded-xl border border-border bg-background p-4">
+                                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Key Points</div>
+                                {result.keyPoints.length > 0 ? (
+                                    <div className="mt-3 space-y-2">
+                                        {result.keyPoints.map((point, index) => (
+                                            <div key={`${point}-${index}`} className="rounded-lg bg-surface px-3 py-2 text-sm text-foreground-soft">
+                                                {point}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="mt-3 text-sm text-muted">No key points were extracted.</div>
+                                )}
+                            </div>
+
+                            <div className="rounded-xl border border-border bg-background p-4">
+                                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Suggestions</div>
+                                {result.suggestions.length > 0 ? (
+                                    <div className="mt-3 space-y-2">
+                                        {result.suggestions.map((suggestion, index) => (
+                                            <div key={`${suggestion}-${index}`} className="rounded-lg bg-surface px-3 py-2 text-sm text-foreground-soft">
+                                                {suggestion}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="mt-3 text-sm text-muted">No suggestions were needed.</div>
+                                )}
+                            </div>
                         </div>
                     )}
 
                     {runState === "idle" && (
                         <div className="rounded-xl border border-border bg-background p-4 text-sm text-foreground-soft">
-                            The browser will run in visible mode after escrow verification. For the best results, include the website URL and the exact action you want performed.
+                            The browser will run in visible mode after escrow verification and return a clean structured answer.
                         </div>
                     )}
 
                     {runState === "running" && (
                         <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-foreground-soft">
-                            The browser is currently executing the planned steps in visible mode. Live logs above reflect the actual run as it happens.
+                            The browser is working through the request and preparing a clean structured result.
                         </div>
                     )}
 
                     {runState === "done" && (
                         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm text-foreground-soft">
-                            The browser run completed. Review the planned steps, executed steps, and final result above to confirm what happened on the page.
+                            The browser run completed. Review the clean final result above.
                         </div>
                     )}
 
                     {runState === "error" && (
                         <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-foreground-soft">
-                            The browser run did not complete successfully. Check the live logs and executed steps above to see which action failed and why.
+                            The browser run did not complete successfully. Retry the instruction or refine the site and task wording.
                         </div>
                     )}
                 </div>

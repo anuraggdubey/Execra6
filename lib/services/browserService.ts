@@ -1,5 +1,3 @@
-import path from "node:path"
-import { promises as fs } from "node:fs"
 import { chromium, type Page } from "playwright"
 import { AgentExecutionError } from "@/lib/agents/shared"
 import type { BrowserAutomationAction } from "@/lib/services/automationPlanner"
@@ -43,12 +41,6 @@ function validateUrl(url: string) {
     return parsed.toString()
 }
 
-async function ensureScreenshotDir() {
-    const dir = path.join(process.cwd(), "public", "browser-agent")
-    await fs.mkdir(dir, { recursive: true })
-    return dir
-}
-
 async function waitForSettledPage(page: Page) {
     await page.waitForLoadState("domcontentloaded", { timeout: 5000 }).catch(() => undefined)
     await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => undefined)
@@ -56,6 +48,80 @@ async function waitForSettledPage(page: Page) {
 
 function selectorLabel(selector: string) {
     return selector.length > 80 ? `${selector.slice(0, 77)}...` : selector
+}
+
+async function extractVisibleTextFromSelector(page: Page, selector: string) {
+    const selectors = selector
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean)
+
+    for (const candidate of selectors) {
+        if (candidate === "title") {
+            const title = (await page.title().catch(() => "")).trim()
+            if (title) return title
+            continue
+        }
+
+        const locator = await resolveSelector(page, candidate)
+        const count = await locator.count().catch(() => 0)
+        if (count === 0) continue
+
+        const first = locator.first()
+        const isVisible = await first.isVisible().catch(() => false)
+        if (!isVisible) continue
+
+        const text = (await first.innerText({ timeout: STEP_TIMEOUT_MS }).catch(() => "")).trim()
+        if (text) return text
+    }
+
+    const fallbackText = await page.evaluate(() => {
+        const mainLike = document.querySelector("main, article, [role='main']")
+        const bodyText = (mainLike?.textContent ?? document.body?.innerText ?? "").trim()
+        return bodyText || document.title || ""
+    }).catch(() => "")
+
+    return fallbackText.trim()
+}
+
+async function extractFormSummary(page: Page) {
+    return page.evaluate(() => {
+        const normalize = (value: string | null | undefined) => (value ?? "").replace(/\s+/g, " ").trim()
+        const title = normalize(document.title)
+        const headings = Array.from(document.querySelectorAll("h1, h2, [role='heading']"))
+            .map((node) => normalize(node.textContent))
+            .filter(Boolean)
+
+        const fields = Array.from(document.querySelectorAll("input, textarea, select"))
+            .map((element) => {
+                const input = element as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+                const labelFromAria = normalize(input.getAttribute("aria-label"))
+                const labelFromPlaceholder = normalize("placeholder" in input ? input.placeholder : "")
+                const labelFromName = normalize(input.getAttribute("name"))
+                const tagName = input.tagName.toLowerCase()
+                const type = "type" in input ? normalize((input as HTMLInputElement).type) || tagName : tagName
+                const required = input.hasAttribute("required") || normalize(input.getAttribute("aria-required")) === "true"
+
+                return {
+                    label: labelFromAria || labelFromPlaceholder || labelFromName || type || "field",
+                    type,
+                    required,
+                }
+            })
+            .filter((field) => field.label)
+
+        const questionBlocks = Array.from(document.querySelectorAll("[role='listitem'], [data-params], .Qr7Oae"))
+            .map((node) => normalize((node as HTMLElement).innerText))
+            .filter((text) => text && text.length < 400)
+            .slice(0, 12)
+
+        return {
+            title,
+            headings: headings.slice(0, 6),
+            fields: fields.slice(0, 20),
+            questions: questionBlocks,
+        }
+    }).catch(() => null)
 }
 
 async function resolveSelector(page: Page, selector: string) {
@@ -97,7 +163,6 @@ export async function executeBrowserPlan(params: {
     const page = await context.newPage()
     const executedSteps: ExecutedBrowserStep[] = []
     const extractedParts: string[] = []
-    const screenshotDir = await ensureScreenshotDir()
     const startedAt = Date.now()
 
     try {
@@ -159,42 +224,46 @@ export async function executeBrowserPlan(params: {
 
             if (step.action === "extractText") {
                 params.onLog(`${prefix}: Extracting text from ${selectorLabel(step.selector)}`)
-                const locator = await resolveSelector(page, step.selector)
-                await locator.waitFor({ state: "visible", timeout: STEP_TIMEOUT_MS })
-                const extractedText = (await locator.innerText({ timeout: STEP_TIMEOUT_MS })).trim()
+                const extractedText = await extractVisibleTextFromSelector(page, step.selector)
+                if (!extractedText) {
+                    throw new AgentExecutionError("EXTRACTION_FAILED", `Could not extract visible text from ${selectorLabel(step.selector)}`, 422)
+                }
+
+                const formSummary = await extractFormSummary(page)
+                const formText = formSummary && (formSummary.fields.length > 0 || formSummary.questions.length > 0)
+                    ? [
+                        formSummary.title ? `Form title: ${formSummary.title}` : "",
+                        formSummary.headings.length > 0 ? `Headings: ${formSummary.headings.join(" | ")}` : "",
+                        formSummary.questions.length > 0 ? `Possible questions:\n- ${formSummary.questions.join("\n- ")}` : "",
+                        formSummary.fields.length > 0
+                            ? `Detected fields:\n- ${formSummary.fields.map((field) => `${field.label}${field.required ? " (required)" : ""} [${field.type}]`).join("\n- ")}`
+                            : "",
+                    ].filter(Boolean).join("\n\n")
+                    : ""
+
+                const combinedText = formText ? `${extractedText}\n\n${formText}` : extractedText
                 extractedParts.push(step.label ? `${step.label}: ${extractedText}` : extractedText)
                 executedSteps.push({
                     action: step.action,
                     status: "completed",
                     detail: `Extracted text from ${selectorLabel(step.selector)}`,
-                    extractedText,
+                    extractedText: combinedText,
                 })
                 continue
             }
 
-            if (step.action === "screenshot") {
-                const fileName = `${Date.now()}-${(step.name ?? "screenshot").replace(/[^a-z0-9-_]+/gi, "-")}.png`
-                const screenshotPath = path.join(screenshotDir, fileName)
-                const screenshotUrl = `/browser-agent/${fileName}`
-                params.onLog(`${prefix}: Capturing screenshot`)
-                await page.waitForTimeout(1000)
-                await page.screenshot({ path: screenshotPath, fullPage: true, timeout: STEP_TIMEOUT_MS })
-                executedSteps.push({
-                    action: step.action,
-                    status: "completed",
-                    detail: "Captured screenshot",
-                    screenshotPath,
-                    screenshotUrl,
-                })
-                continue
-            }
         }
 
         params.onLog("Browser automation completed successfully.", "success")
         await page.waitForTimeout(VISIBLE_COMPLETION_DELAY_MS)
         return {
             stepsExecuted: executedSteps,
-            result: extractedParts.join("\n\n") || "Browser automation completed without text extraction.",
+            result: executedSteps
+                .map((step) => step.extractedText)
+                .filter((value): value is string => Boolean(value))
+                .join("\n\n")
+                || extractedParts.join("\n\n")
+                || "Browser automation completed without text extraction.",
             finalUrl: page.url(),
         }
     } catch (error) {

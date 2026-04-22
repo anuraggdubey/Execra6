@@ -20,13 +20,21 @@ export type ExecutedBrowserStep = {
     screenshotUrl?: string
 }
 
+export type BrowserStructuredResult = {
+    summary: string
+    details: string
+    keyPoints: string[]
+    searchedQuery: string
+    suggestions: string[]
+}
+
 export type BrowserAgentRunResult = {
     plannedSteps?: Array<{
         action: string
         detail: string
     }>
     stepsExecuted: ExecutedBrowserStep[]
-    result: string
+    result: BrowserStructuredResult
     logs: BrowserAgentLog[]
 }
 

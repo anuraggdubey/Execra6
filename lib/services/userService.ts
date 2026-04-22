@@ -6,6 +6,41 @@ function normalizeError(error: unknown, fallback: string) {
     return error instanceof Error ? error.message : fallback
 }
 
+let hasWarnedAboutMissingUsersTable = false
+
+function isMissingUsersTableError(error: unknown) {
+    if (!error || typeof error !== "object") return false
+
+    const maybeError = error as { code?: string; message?: string }
+    const message = maybeError.message?.toLowerCase() ?? ""
+
+    return (
+        maybeError.code === "PGRST205" ||
+        maybeError.code === "42P01" ||
+        message.includes("could not find the table 'public.users'") ||
+        message.includes("relation \"public.users\" does not exist")
+    )
+}
+
+function createFallbackUser(walletAddress: string, githubConnected = false) {
+    return {
+        id: null,
+        wallet_address: walletAddress,
+        github_connected: githubConnected,
+        created_at: new Date().toISOString(),
+        persisted: false,
+    }
+}
+
+function warnAboutMissingUsersTable() {
+    if (hasWarnedAboutMissingUsersTable) return
+
+    hasWarnedAboutMissingUsersTable = true
+    console.warn(
+        "[supabase] public.users is missing. Run supabase/schema.sql in your Supabase project to enable user persistence."
+    )
+}
+
 export async function upsertUserByWallet(walletAddressInput: unknown) {
     const walletAddress = requireWalletAddress(walletAddressInput)
     const supabase = getSupabaseServerClient()
@@ -25,6 +60,11 @@ export async function upsertUserByWallet(walletAddressInput: unknown) {
         .single()
 
     if (error) {
+        if (isMissingUsersTableError(error)) {
+            warnAboutMissingUsersTable()
+            return createFallbackUser(walletAddress)
+        }
+
         throw new AgentExecutionError("DB_USER_UPSERT_FAILED", normalizeError(error, "Failed to upsert user."), 500)
     }
 
@@ -51,6 +91,11 @@ export async function setGitHubConnected(walletAddressInput: unknown, githubConn
         .single()
 
     if (error) {
+        if (isMissingUsersTableError(error)) {
+            warnAboutMissingUsersTable()
+            return createFallbackUser(walletAddress, githubConnected)
+        }
+
         throw new AgentExecutionError("DB_USER_UPDATE_FAILED", normalizeError(error, "Failed to update GitHub status."), 500)
     }
 

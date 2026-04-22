@@ -8,12 +8,36 @@ export type BrowserAutomationAction =
     | { action: "press"; key: string }
     | { action: "waitForSelector"; selector: string }
     | { action: "extractText"; selector: string; label?: string }
-    | { action: "screenshot"; name?: string }
 
 const MAX_STEPS = 8
 
 function stripCodeFence(input: string) {
     return input.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim()
+}
+
+function humanizeRouteSegment(value: string) {
+    return value
+        .replace(/^\/+|\/+$/g, "")
+        .split(/[/?#]/)[0]
+        .replace(/[-_]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+}
+
+function sanitizeSelector(selector: string) {
+    const trimmed = selector.trim()
+    const hrefMatch = trimmed.match(/^a\s*\[\s*href\s*=\s*['"]([^'"]+)['"]\s*\]$/i)
+    if (hrefMatch?.[1]) {
+        const humanized = humanizeRouteSegment(hrefMatch[1])
+        if (humanized) return humanized
+    }
+
+    if (/^\/[a-z0-9/_-]+$/i.test(trimmed)) {
+        const humanized = humanizeRouteSegment(trimmed)
+        if (humanized) return humanized
+    }
+
+    return trimmed
 }
 
 function normalizeStep(step: unknown): BrowserAutomationAction | null {
@@ -27,7 +51,7 @@ function normalizeStep(step: unknown): BrowserAutomationAction | null {
     }
 
     if (action === "click" && typeof item.selector === "string" && item.selector.trim()) {
-        return { action, selector: item.selector.trim() }
+        return { action, selector: sanitizeSelector(item.selector) }
     }
 
     if (
@@ -36,7 +60,7 @@ function normalizeStep(step: unknown): BrowserAutomationAction | null {
         item.selector.trim() &&
         typeof item.value === "string"
     ) {
-        return { action, selector: item.selector.trim(), value: item.value }
+        return { action, selector: sanitizeSelector(item.selector), value: item.value }
     }
 
     if (action === "press" && typeof item.key === "string" && item.key.trim()) {
@@ -44,21 +68,14 @@ function normalizeStep(step: unknown): BrowserAutomationAction | null {
     }
 
     if (action === "waitForSelector" && typeof item.selector === "string" && item.selector.trim()) {
-        return { action, selector: item.selector.trim() }
+        return { action, selector: sanitizeSelector(item.selector) }
     }
 
     if (action === "extractText" && typeof item.selector === "string" && item.selector.trim()) {
         return {
             action,
-            selector: item.selector.trim(),
+            selector: sanitizeSelector(item.selector),
             label: typeof item.label === "string" ? item.label.trim() : undefined,
-        }
-    }
-
-    if (action === "screenshot") {
-        return {
-            action,
-            name: typeof item.name === "string" ? item.name.trim() : undefined,
         }
     }
 
@@ -70,25 +87,60 @@ function extractUrlFallback(instruction: string) {
     return match?.[0]?.trim() ?? null
 }
 
+function extractSearchIntent(instruction: string) {
+    const patterns = [
+        /search\s+for\s+["“]?(.+?)["”]?(?:\s+(?:and|then|on|from)\b|$)/i,
+        /(?:find|look\s+for|search|watch|play)\s+["“]?(.+?)["”]?(?:\s+(?:on|in|from|and|then)\b|$)/i,
+        /(?:open|go\s+to|visit)\s+https?:\/\/[^\s]+\s+(?:and\s+)?(?:find|search(?:\s+for)?|watch|play)\s+["“]?(.+?)["”]?$/i,
+    ]
+
+    for (const pattern of patterns) {
+        const match = instruction.match(pattern)
+        if (match?.[1]?.trim()) {
+            return match[1].trim()
+        }
+    }
+
+    return null
+}
+
 function buildDeterministicPlan(instruction: string) {
     const fallbackUrl = extractUrlFallback(instruction)
     if (!fallbackUrl) return null
 
     const lowered = instruction.toLowerCase()
     const steps: BrowserAutomationAction[] = [{ action: "goto", url: fallbackUrl }]
+    let hostname = ""
 
-    const searchMatch = instruction.match(/search\s+for\s+["“]?(.+?)["”]?(?:\s+(?:and|then|on|from)\b|$)/i)
-    if (searchMatch?.[1]) {
-        const searchSelectors = 'input[type="search"], input[name*="search" i], input[placeholder*="search" i], input[aria-label*="search" i], input[type="text"]'
+    try {
+        hostname = new URL(fallbackUrl).hostname.toLowerCase()
+    } catch {
+        hostname = ""
+    }
+
+    const searchIntent = extractSearchIntent(instruction)
+    if (searchIntent) {
+        const searchSelectors = hostname.includes("youtube.com")
+            ? 'input[name="search_query"], textarea[name="search_query"], input#search, input[placeholder*="Search" i], input[type="search"], input[type="text"]'
+            : 'input[type="search"], input[name*="search" i], input[placeholder*="search" i], input[aria-label*="search" i], input[type="text"]'
+
         steps.push(
             { action: "waitForSelector", selector: searchSelectors },
-            { action: "type", selector: searchSelectors, value: searchMatch[1].trim() },
+            { action: "type", selector: searchSelectors, value: searchIntent },
             { action: "press", key: "Enter" }
         )
+
+        if (hostname.includes("youtube.com")) {
+            steps.push({
+                action: "extractText",
+                selector: "ytd-video-renderer, ytd-item-section-renderer, #contents, main, body",
+                label: "Search results",
+            })
+        }
     }
 
     const extractMatch = lowered.includes("extract") || lowered.includes("get ") || lowered.includes("read ") || lowered.includes("scrape")
-    if (extractMatch) {
+    if (extractMatch && !steps.some((step) => step.action === "extractText")) {
         steps.push({
             action: "extractText",
             selector: "main, article, [role='main'], body",
@@ -96,14 +148,10 @@ function buildDeterministicPlan(instruction: string) {
         })
     }
 
-    if (lowered.includes("screenshot")) {
-        steps.push({ action: "screenshot", name: "page-state" })
-    }
-
     if (steps.length === 1) {
         steps.push(
             { action: "waitForSelector", selector: "body" },
-            { action: "extractText", selector: "title, h1, body", label: "Visible page text" }
+            { action: "extractText", selector: "main, form, [role='main'], body", label: "Visible page text" }
         )
     }
 
@@ -119,9 +167,15 @@ export async function planBrowserAutomation(instruction: string) {
     const completion = await completeWithOpenRouter({
         system: [
             "You convert browser automation instructions into a strict JSON array of steps.",
-            "Allowed actions: goto, click, type, waitForSelector, extractText, screenshot.",
+            "Allowed actions: goto, click, type, waitForSelector, extractText.",
             "Keep plans safe, short, and concrete.",
-            "Use only selectors that are likely stable such as ids, names, aria labels, placeholder text, or text-based CSS when reasonable.",
+            "Use only selectors that are likely stable such as visible link or button text, ids, names, aria labels, or placeholder text.",
+            "Prefer human-readable visible labels like Points Table, Standings, Search, or Pricing over CSS paths and href fragments.",
+            "Recognize search intent from phrases like find, look for, search, search for, watch, or play when the user names an item to locate on the site.",
+            "For search-heavy websites like YouTube, prefer using the site's search box instead of guessing a destination URL.",
+            "Do not convert the user's information request into a guessed URL path, route slug, or href selector such as /points-table or a[href='/points-table'].",
+            "If the user wants information from the page, prefer extracting text from the relevant visible section instead of inventing a navigation target.",
+            "Do not include screenshot steps.",
             "Do not include credentials or invented secrets.",
             `Return at most ${MAX_STEPS} steps.`,
             "Return JSON only.",
