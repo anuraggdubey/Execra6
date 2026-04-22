@@ -4,7 +4,7 @@ Excera is a wallet-first multi-agent workspace built on `Next.js`, `Supabase`, a
 
 ## Live App
 
-[Live URL](https://execra-ai.vercel.app)
+[Live URL](https://execra6-ai.vercel.app)
 
 ## Demo Video
 
@@ -47,7 +47,7 @@ It validates the repo with:
 
 ## User Feedback
 
-We collected feedback from 5+ testnet users.
+We collected feedback from 20+ testnet users.
 
 - [View Feedback Sheet](https://docs.google.com/spreadsheets/d/1m6TaHdlt-Aq-8KD_0iVJUwQH0wSc6tWdmSN2C3pYl3Q/edit?usp=sharing)
 - [Submit Feedback](https://forms.gle/qXJ3EdkhUz9A95eN9)

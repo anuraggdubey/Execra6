@@ -41,6 +41,14 @@ function getHeaders(accessToken: string) {
     }
 }
 
+function getOptionalHeaders(accessToken?: string | null) {
+    return {
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": GITHUB_API_VERSION,
+    }
+}
+
 async function githubRequest<T>(url: string, accessToken: string): Promise<T> {
     const response = await fetch(url, {
         headers: getHeaders(accessToken),
@@ -63,28 +71,57 @@ async function githubRequest<T>(url: string, accessToken: string): Promise<T> {
     return response.json()
 }
 
-export function githubTool(config: { accessToken: string; owner?: string; repo?: string }) {
-    const { accessToken, owner, repo } = config
+async function githubRequestOptional<T>(url: string, accessToken?: string | null): Promise<T> {
+    const response = await fetch(url, {
+        headers: getOptionalHeaders(accessToken),
+        cache: "no-store",
+    })
 
-    if (!accessToken) {
-        throw new Error("GitHub access token is required")
+    if (!response.ok) {
+        let message = `GitHub request failed with status ${response.status}`
+        try {
+            const payload = await response.json()
+            if (typeof payload?.message === "string") {
+                message = payload.message
+            }
+        } catch {
+            // Keep the status-based message.
+        }
+        throw new Error(message)
     }
+
+    return response.json()
+}
+
+export function githubTool(config: { accessToken?: string | null; owner?: string; repo?: string }) {
+    const { accessToken, owner, repo } = config
 
     return {
         getAuthenticatedUser: () =>
-            githubRequest<GitHubUser>("https://api.github.com/user", accessToken),
+            accessToken
+                ? githubRequest<GitHubUser>("https://api.github.com/user", accessToken)
+                : Promise.reject(new Error("GitHub access token is required")),
         listRepos: () =>
-            githubRequest<GitHubRepo[]>("https://api.github.com/user/repos?per_page=100&sort=pushed&type=all", accessToken),
+            accessToken
+                ? githubRequest<GitHubRepo[]>("https://api.github.com/user/repos?per_page=100&sort=pushed&type=all", accessToken)
+                : Promise.reject(new Error("GitHub access token is required")),
+        getRepo: () => {
+            if (!owner || !repo) throw new Error("owner and repo are required")
+            return githubRequestOptional<GitHubRepo>(
+                `https://api.github.com/repos/${owner}/${repo}`,
+                accessToken
+            )
+        },
         getTree: (ref = "HEAD") => {
             if (!owner || !repo) throw new Error("owner and repo are required")
-            return githubRequest<GitHubTreeResponse>(
+            return githubRequestOptional<GitHubTreeResponse>(
                 `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`,
                 accessToken
             )
         },
         getContent: (filePath: string) => {
             if (!owner || !repo) throw new Error("owner and repo are required")
-            return githubRequest<GitHubContentResponse>(
+            return githubRequestOptional<GitHubContentResponse>(
                 `https://api.github.com/repos/${owner}/${repo}/contents/${filePath.split("/").map(encodeURIComponent).join("/")}`,
                 accessToken
             )

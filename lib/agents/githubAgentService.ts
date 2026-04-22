@@ -1,5 +1,5 @@
 import { completeWithOpenRouter } from "@/lib/llm/openrouter"
-import { createToolError } from "@/lib/agents/shared"
+import { AgentExecutionError, createToolError } from "@/lib/agents/shared"
 import { githubTool, type GitHubRepo, type GitHubTreeNode, type GitHubTreeResponse } from "@/lib/tools/githubTool"
 
 const IMPORTANT_FILES = new Set([
@@ -81,7 +81,33 @@ export async function connectGitHub(accessToken: string) {
     }
 }
 
-export async function fetchRepoContext(config: { accessToken: string; owner: string; repo: string; ref?: string }) {
+export async function resolveRepository(config: { accessToken?: string | null; owner: string; repo: string }) {
+    const tool = githubTool(config)
+
+    try {
+        const repo = await tool.getRepo()
+        return {
+            id: repo.id,
+            name: repo.name,
+            fullName: repo.full_name,
+            description: repo.description ?? "",
+            language: repo.language ?? "Unknown",
+            stars: repo.stargazers_count ?? 0,
+            isPrivate: Boolean(repo.private),
+            updatedAt: repo.pushed_at,
+            defaultBranch: repo.default_branch ?? "main",
+        }
+    } catch (error) {
+        const message = error instanceof Error ? error.message.toLowerCase() : ""
+        if (message.includes("not found")) {
+            throw new AgentExecutionError("INVALID_GITHUB_REPO", "Invalid GitHub repo.", 404)
+        }
+
+        throw createToolError("githubTool", error, "Unable to load repository")
+    }
+}
+
+export async function fetchRepoContext(config: { accessToken?: string | null; owner: string; repo: string; ref?: string }) {
     const tool = githubTool(config)
     const treeRef = config.ref?.trim() || "HEAD"
 
@@ -137,10 +163,23 @@ const ANALYZE_SYSTEM_PROMPT = `You analyze repositories using only the supplied 
 
 Return markdown with:
 ## Overview
+## Core Purpose
+## Architecture And Design
+## Important Files And Modules
+## Data And Control Flow
+## Strengths
 ## Issues Found
+## Risks And Edge Cases
+## Security Notes
+## Performance And Scalability
+## Testing And Gaps
 ## Suggestions
 ## Security Notes
-## Quick Wins`
+## Quick Wins
+
+Be very detailed, concrete, and repository-specific.
+Reference files and implementation patterns from the provided context wherever possible.
+Do not invent code that is not present in the supplied context.`
 
 export async function analyzeRepository(input: {
     owner: string
@@ -156,6 +195,14 @@ export async function analyzeRepository(input: {
 }
 
 const ASK_SYSTEM_PROMPT = `You answer questions about a repository using only the supplied repository context.
+
+Be very detailed and specific.
+When useful, structure the response with:
+## Direct Answer
+## Evidence From The Repository
+## Relevant Files
+## Risks Or Limitations
+## Recommendations
 
 If the answer is not present in the provided code, say that clearly.`
 

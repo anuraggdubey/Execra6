@@ -59,6 +59,28 @@ function getErrorMessage(error: unknown, fallback: string) {
     return error instanceof Error ? error.message : fallback
 }
 
+function parseGitHubRepoInput(input: string) {
+    const trimmed = input.trim()
+    if (!trimmed) return null
+
+    const normalized = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+
+    try {
+        const url = new URL(normalized)
+        if (!/^(www\.)?github\.com$/i.test(url.hostname)) return null
+
+        const parts = url.pathname.split("/").filter(Boolean)
+        if (parts.length < 2) return null
+
+        return {
+            owner: parts[0],
+            repo: parts[1].replace(/\.git$/i, ""),
+        }
+    } catch {
+        return null
+    }
+}
+
 export default function GitHubAgent() {
     const { walletAddress, shortWalletAddress, walletProviderId } = useWalletContext()
     const { startAgentRun, completeAgentRun, failAgentRun, logAgentEvent } = useAgentContext()
@@ -67,6 +89,7 @@ export default function GitHubAgent() {
     const [githubAccessToken, setGitHubAccessToken] = useState<string | null>(null)
     const [repos, setRepos] = useState<Repo[]>([])
     const [selectedRepo, setSelectedRepo] = useState<Repo | null>(null)
+    const [repoUrlInput, setRepoUrlInput] = useState("")
     const [repoContext, setRepoContext] = useState("")
     const [repoFiles, setRepoFiles] = useState<string[]>([])
     const [prompt, setPrompt] = useState("")
@@ -74,11 +97,12 @@ export default function GitHubAgent() {
     const [loading, setLoading] = useState(false)
     const [connecting, setConnecting] = useState(false)
     const [indexing, setIndexing] = useState(false)
+    const [validatingRepoUrl, setValidatingRepoUrl] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [rewardXlm, setRewardXlm] = useState("0.2000000")
     const [txState, setTxState] = useState<string | null>(null)
     const lastLoadedTokenRef = useRef<string | null>(null)
-    const agentLocked = loading || indexing
+    const agentLocked = loading || indexing || validatingRepoUrl
 
     const githubConfigured = Boolean(platformStatus?.tools?.github?.configured)
 
@@ -97,6 +121,7 @@ export default function GitHubAgent() {
         setGhUser(null)
         setRepos([])
         setSelectedRepo(null)
+        setRepoUrlInput("")
         setRepoContext("")
         setRepoFiles([])
         setPrompt("")
@@ -182,7 +207,7 @@ export default function GitHubAgent() {
 
         window.addEventListener("message", listener)
         return () => window.removeEventListener("message", listener)
-    }, [loadGitHubConnection, walletAddress])
+    }, [walletAddress])
 
     const beginOAuth = useCallback(() => {
         if (!walletAddress) {
@@ -226,8 +251,70 @@ export default function GitHubAgent() {
         setError(null)
     }, [resetWorkspace, walletAddress])
 
+    const buildFetchHeaders = () => {
+        const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+        }
+
+        if (githubAccessToken) {
+            headers.Authorization = `Bearer ${githubAccessToken}`
+        }
+
+        return headers
+    }
+
+    const validateRepoUrl = async () => {
+        if (!walletAddress) {
+            setError("Connect a wallet before loading a repository.")
+            return
+        }
+
+        const parsed = parseGitHubRepoInput(repoUrlInput)
+        if (!parsed) {
+            setError("Invalid GitHub repo")
+            return
+        }
+
+        setValidatingRepoUrl(true)
+        setError(null)
+        setSelectedRepo(null)
+        setRepoContext("")
+        setRepoFiles([])
+        setPrompt("")
+        setResult("")
+
+        try {
+            const res = await fetch("/api/fetch-repo", {
+                method: "POST",
+                headers: buildFetchHeaders(),
+                body: JSON.stringify({
+                    owner: parsed.owner,
+                    repo: parsed.repo,
+                    walletAddress,
+                    blockchain: null,
+                }),
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error ?? "Invalid GitHub repo")
+
+            setSelectedRepo(data.repo)
+            setRepoUrlInput(`https://github.com/${data.repo.fullName}`)
+            setRepoContext(data.context)
+            setRepoFiles(data.files)
+            logAgentEvent("github", `Loaded repository ${data.repo.fullName} from a pasted GitHub URL.`, { status: "success" })
+        } catch (err) {
+            const message = getErrorMessage(err, "Invalid GitHub repo")
+            setError(message)
+            setSelectedRepo(null)
+            setRepoContext("")
+            setRepoFiles([])
+        } finally {
+            setValidatingRepoUrl(false)
+        }
+    }
+
     const loadRepo = async () => {
-        if (!selectedRepo || !githubAccessToken) return
+        if (!selectedRepo || !walletAddress) return
 
         setIndexing(true)
         setError(null)
@@ -238,7 +325,7 @@ export default function GitHubAgent() {
         let preparedTask: Awaited<ReturnType<typeof prepareEscrowedTask>> | null = null
         try {
             preparedTask = await prepareEscrowedTask({
-                walletAddress: walletAddress!,
+                walletAddress,
                 walletProviderId,
                 rewardXlm,
                 agentType: "github",
@@ -246,10 +333,7 @@ export default function GitHubAgent() {
             const [owner, repo] = selectedRepo.fullName.split("/")
             const res = await fetch("/api/fetch-repo", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${githubAccessToken}`,
-                },
+                headers: buildFetchHeaders(),
                 body: JSON.stringify({
                     owner,
                     repo,
@@ -261,8 +345,10 @@ export default function GitHubAgent() {
             const data = await res.json()
             if (!res.ok) throw new Error(data.error ?? "Failed to index repository")
 
+            setSelectedRepo(data.repo ?? selectedRepo)
             setRepoContext(data.context)
             setRepoFiles(data.files)
+            setRepoUrlInput(`https://github.com/${(data.repo ?? selectedRepo).fullName}`)
             setTxState("Confirming on-chain...")
             completeAgentRun(
                 "github",
@@ -272,12 +358,12 @@ export default function GitHubAgent() {
 
             await finalizeEscrowedTask({
                 taskId: data.taskId,
-                walletAddress: walletAddress!,
+                walletAddress,
                 walletProviderId,
                 onChainTaskId: preparedTask.onChainTaskId,
                 blockchainPayload: preparedTask.blockchainPayload,
             })
-            setTxState("On-chain confirmed ✓")
+            setTxState("On-chain confirmed")
         } catch (err) {
             const message = getErrorMessage(err, "Failed to index repository")
             setError(message)
@@ -339,7 +425,7 @@ export default function GitHubAgent() {
                 onChainTaskId: preparedTask.onChainTaskId,
                 blockchainPayload: preparedTask.blockchainPayload,
             })
-            setTxState("On-chain confirmed ✓")
+            setTxState("On-chain confirmed")
         } catch (err) {
             const message = getErrorMessage(err, "GitHub agent failed")
             setError(message)
@@ -395,7 +481,7 @@ export default function GitHubAgent() {
                 onChainTaskId: preparedTask.onChainTaskId,
                 blockchainPayload: preparedTask.blockchainPayload,
             })
-            setTxState("On-chain confirmed ✓")
+            setTxState("On-chain confirmed")
         } catch (err) {
             const message = getErrorMessage(err, "Repository analysis failed")
             setError(message)
@@ -430,13 +516,13 @@ export default function GitHubAgent() {
                 <div className="flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3.5 sm:p-4">
                     <Wallet size={16} className="mt-0.5 shrink-0 text-amber-500" />
                     <div className="min-w-0 text-[13px] leading-relaxed text-amber-700 dark:text-amber-300 sm:text-sm">
-                        Connect a Stellar wallet before linking GitHub. GitHub access tokens are stored against the active wallet address.
+                        Connect a Stellar wallet before using the GitHub agent.
                     </div>
                 </div>
             )}
 
             <div className="rounded-xl border border-border bg-surface p-3 sm:p-4">
-                <div className="text-[11px] font-medium uppercase tracking-wider text-muted mb-3">Setup Progress</div>
+                <div className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted">Setup Progress</div>
                 <div className="flex items-center gap-1.5 sm:gap-2">
                     <StepDot label="Wallet" ready={Boolean(walletAddress)} />
                     <div className="h-px flex-1 bg-border" />
@@ -449,10 +535,10 @@ export default function GitHubAgent() {
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
-                <div className="rounded-xl border border-border bg-surface overflow-hidden">
+                <div className="overflow-hidden rounded-xl border border-border bg-surface">
                     <div className="flex items-center gap-2 border-b border-border px-3 py-2 sm:px-4 sm:py-3">
                         <Github size={14} className="text-primary" />
-                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Step 1 — Connect GitHub</span>
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Step 1 - Connect GitHub Optional</span>
                     </div>
                     <div className="space-y-3 p-3 sm:p-4">
                         <div>
@@ -472,32 +558,27 @@ export default function GitHubAgent() {
 
                         {!githubConfigured && (
                             <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-[13px] leading-relaxed text-amber-700 dark:text-amber-300 sm:text-sm">
-                                GitHub OAuth is not configured. Add the client ID, secret, and callback URL in the server environment first.
+                                GitHub OAuth is not configured. You can still paste and analyze public GitHub repositories below.
                             </div>
                         )}
 
-                        {!walletAddress && (
-                            <p className="text-[13px] leading-relaxed text-foreground-soft sm:text-sm">
-                                Your GitHub connection will be scoped to the connected wallet address.
-                            </p>
+                        {walletAddress && !ghUser && (
+                            <div className="rounded-lg border border-border bg-background p-3 text-[13px] leading-relaxed text-foreground-soft sm:text-sm">
+                                Connect GitHub if you want to browse your own repositories quickly. You can also skip GitHub login and paste any public GitHub repository URL in Step 2.
+                            </div>
                         )}
 
                         {walletAddress && !ghUser && githubConfigured && (
-                            <>
-                                <div className="rounded-lg border border-border bg-background p-3 text-[13px] leading-relaxed text-foreground-soft sm:text-sm">
-                                    Wallet identity: <span className="font-medium text-foreground">{walletAddress}</span>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={beginOAuth}
-                                    disabled={connecting || agentLocked}
-                                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
-                                    style={{ minHeight: 44 }}
-                                >
-                                    {connecting ? <Loader2 size={15} className="animate-spin" /> : <Github size={15} />}
-                                    Connect GitHub
-                                </button>
-                            </>
+                            <button
+                                type="button"
+                                onClick={beginOAuth}
+                                disabled={connecting || agentLocked}
+                                className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                                style={{ minHeight: 44 }}
+                            >
+                                {connecting ? <Loader2 size={15} className="animate-spin" /> : <Github size={15} />}
+                                Connect GitHub
+                            </button>
                         )}
 
                         {walletAddress && ghUser && (
@@ -528,17 +609,45 @@ export default function GitHubAgent() {
                     </div>
                 </div>
 
-                <div className="rounded-xl border border-border bg-surface overflow-hidden">
+                <div className="overflow-hidden rounded-xl border border-border bg-surface">
                     <div className="flex items-center gap-2 border-b border-border px-3 py-2 sm:px-4 sm:py-3">
                         <FolderGit2 size={14} className="text-primary" />
-                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Step 2 — Select Repository</span>
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Step 2 - Select Or Paste Repository</span>
                     </div>
                     <div className="space-y-3 p-3 sm:p-4">
+                        <div className="space-y-2">
+                            <label className="block text-[11px] font-medium uppercase tracking-wider text-muted">Paste GitHub Repository URL</label>
+                            <input
+                                value={repoUrlInput}
+                                onChange={(event) => setRepoUrlInput(event.target.value)}
+                                placeholder="https://github.com/owner/repo"
+                                disabled={agentLocked}
+                                className="w-full rounded-lg border border-border bg-background px-3.5 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                                style={{ minHeight: 44 }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => void validateRepoUrl()}
+                                disabled={!repoUrlInput.trim() || validatingRepoUrl || agentLocked || !walletAddress}
+                                className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-elevated disabled:opacity-50"
+                                style={{ minHeight: 44 }}
+                            >
+                                {validatingRepoUrl ? <Loader2 size={14} className="animate-spin" /> : <FolderGit2 size={14} className="text-primary" />}
+                                Validate And Load Repo
+                            </button>
+                            <p className="text-[12px] leading-relaxed text-foreground-soft sm:text-xs">
+                                Paste any public GitHub repository link here. If the repository does not exist, the agent will show <span className="font-medium text-foreground">Invalid GitHub repo</span>.
+                            </p>
+                        </div>
+
+                        <div className="h-px bg-border" />
+
                         <select
-                            value={selectedRepo?.fullName ?? ""}
+                            value={ghUser ? selectedRepo?.fullName ?? "" : ""}
                             onChange={(event) => {
                                 const repo = repos.find((entry) => entry.fullName === event.target.value) ?? null
                                 setSelectedRepo(repo)
+                                setRepoUrlInput(repo ? `https://github.com/${repo.fullName}` : "")
                                 setRepoContext("")
                                 setRepoFiles([])
                                 setResult("")
@@ -548,7 +657,7 @@ export default function GitHubAgent() {
                             className="w-full rounded-lg border border-border bg-background px-3.5 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
                             style={{ minHeight: 44 }}
                         >
-                            <option value="">Choose a repository</option>
+                            <option value="">Choose one of your connected repositories</option>
                             {repos.map((repo) => (
                                 <option key={repo.id} value={repo.fullName}>
                                     {repo.fullName}
@@ -559,7 +668,7 @@ export default function GitHubAgent() {
                         <button
                             type="button"
                             onClick={() => void loadRepo()}
-                            disabled={!selectedRepo || indexing || !ghUser || agentLocked}
+                            disabled={!selectedRepo || indexing || agentLocked || !walletAddress}
                             className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-elevated disabled:opacity-50"
                             style={{ minHeight: 44 }}
                         >
@@ -580,7 +689,7 @@ export default function GitHubAgent() {
                                         </span>
                                     )}
                                     <span className="rounded-md border border-border px-2 py-0.5 text-[10px] font-medium text-muted">
-                                        ★ {selectedRepo.stars}
+                                        Starred {selectedRepo.stars}
                                     </span>
                                     <span className="rounded-md border border-border px-2 py-0.5 text-[10px] font-medium text-muted">
                                         {selectedRepo.defaultBranch}
@@ -588,7 +697,7 @@ export default function GitHubAgent() {
                                 </div>
                                 {repoFiles.length > 0 && (
                                     <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
-                                        ✓ {repoFiles.length} files indexed
+                                        Indexed {repoFiles.length} files
                                     </div>
                                 )}
                             </div>
@@ -597,11 +706,11 @@ export default function GitHubAgent() {
                 </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-surface overflow-hidden">
+            <div className="overflow-hidden rounded-xl border border-border bg-surface">
                 <div className="flex items-center justify-between border-b border-border px-3 py-2 sm:px-4 sm:py-3">
                     <div className="flex items-center gap-2">
                         <BookOpenText size={14} className="text-primary" />
-                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Step 3 — Ask the Agent</span>
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Step 3 - Ask The Agent</span>
                     </div>
                     <button
                         type="button"
@@ -619,9 +728,9 @@ export default function GitHubAgent() {
                         <div className="flex items-center gap-3 rounded-lg border border-dashed border-border bg-background p-4 sm:p-6">
                             <Github size={20} className="shrink-0 text-muted" />
                             <div>
-                                <div className="text-sm font-semibold text-foreground">Wallet-scoped GitHub workflow</div>
+                                <div className="text-sm font-semibold text-foreground">Analyze your own repos or any public GitHub repo</div>
                                 <p className="mt-0.5 text-[13px] leading-relaxed text-foreground-soft sm:text-xs">
-                                    Connect a wallet, attach GitHub to that wallet, select a repository, then index the codebase below.
+                                    Connect a wallet, then either connect GitHub for your own repositories or paste any public GitHub repo URL and load it.
                                 </p>
                             </div>
                         </div>
@@ -633,8 +742,8 @@ export default function GitHubAgent() {
                             onChange={(event) => setPrompt(event.target.value)}
                             placeholder={
                                 isReadyForPrompt
-                                    ? "e.g. Explain the auth flow, identify risks, and suggest fixes."
-                                    : "Connect a wallet, connect GitHub, and index a repository first."
+                                    ? "e.g. Give me a very detailed analysis of this repository architecture, main modules, risk areas, auth flow, data flow, and improvement opportunities."
+                                    : "Connect a wallet, then connect GitHub or paste a valid repository URL and load it first."
                             }
                             rows={4}
                             disabled={!isReadyForPrompt || loading || agentLocked}
@@ -671,7 +780,7 @@ export default function GitHubAgent() {
                     {loading && (
                         <div className="flex items-center gap-3 rounded-lg border border-border bg-background p-3.5">
                             <Loader2 size={15} className="animate-spin text-primary" />
-                            <span className="text-[13px] text-foreground-soft sm:text-sm">Analyzing repository...</span>
+                            <span className="text-[13px] text-foreground-soft sm:text-sm">Analyzing repository in detail...</span>
                         </div>
                     )}
 
@@ -686,11 +795,11 @@ export default function GitHubAgent() {
             </div>
 
             {repoFiles.length > 0 && (
-                <details className="rounded-xl border border-border bg-surface overflow-hidden">
+                <details className="overflow-hidden rounded-xl border border-border bg-surface">
                     <summary className="cursor-pointer px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted select-none" style={{ minHeight: 44, display: "flex", alignItems: "center" }}>
                         Indexed Files ({repoFiles.length})
                     </summary>
-                    <div className="max-h-[300px] overflow-y-auto border-t border-border p-3 space-y-1">
+                    <div className="max-h-[300px] space-y-1 overflow-y-auto border-t border-border p-3">
                         {repoFiles.map((file) => (
                             <div
                                 key={file}

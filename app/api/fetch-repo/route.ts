@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { fetchRepoContext } from "@/lib/agents/githubAgentService"
+import { fetchRepoContext, resolveRepository } from "@/lib/agents/githubAgentService"
 import { AgentExecutionError } from "@/lib/agents/shared"
 import { readGitHubAccessToken } from "@/lib/githubAccessToken"
 import { createAgentRun, createTask, failTask, updateTask } from "@/lib/services/taskService"
@@ -15,8 +15,8 @@ export async function POST(req: Request) {
         const { owner, repo, ref, walletAddress, blockchain } = body
         const accessToken = readGitHubAccessToken(req)
 
-        if (!accessToken || !owner || !repo) {
-            return NextResponse.json({ error: "GitHub access token, owner, and repo are required" }, { status: 400 })
+        if (!owner || !repo) {
+            return NextResponse.json({ error: "owner and repo are required" }, { status: 400 })
         }
 
         const normalizedWalletAddress = requireWalletAddress(walletAddress)
@@ -31,16 +31,17 @@ export async function POST(req: Request) {
         })
         taskId = task.id
 
-        const result = await fetchRepoContext({ accessToken, owner, repo, ref })
+        const repoInfo = await resolveRepository({ accessToken, owner, repo })
+        const result = await fetchRepoContext({ accessToken, owner, repo, ref: ref || repoInfo.defaultBranch })
         await updateTask({
             taskId,
             status: "completed",
-            outputResult: result,
+            outputResult: { ...result, repo: repoInfo },
             blockchain,
         })
         await createAgentRun(taskId, { stage: "github-index", status: "completed", owner, repo, ref }, Date.now() - startedAt)
 
-        return NextResponse.json({ success: true, taskId, ...result })
+        return NextResponse.json({ success: true, taskId, repo: repoInfo, ...result })
     } catch (err: unknown) {
         if (taskId) {
             const message = err instanceof Error ? err.message : "Failed to fetch repo"
