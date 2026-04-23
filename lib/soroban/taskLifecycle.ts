@@ -1,5 +1,6 @@
 "use client"
 
+import { buildInitialTaskFeatureState, readStoredTaskFeatureConfig } from "@/lib/taskFeatures"
 import { cancelEscrowedTask, completeEscrowedTask, createEscrowedTask, rewardXlmToStroops } from "@/lib/soroban/taskEscrowClient"
 import type { AgentType } from "@/types/tasks"
 
@@ -12,6 +13,8 @@ export type PreparedOnChainTask = {
         contractId: string
         onChainStatus: "pending"
         createTxHash: string
+        featureConfig: ReturnType<typeof readStoredTaskFeatureConfig>
+        featureState: ReturnType<typeof buildInitialTaskFeatureState>
     }
     onChainTaskId: bigint
 }
@@ -24,6 +27,7 @@ export async function prepareEscrowedTask(params: {
 }) {
     const onChainTaskId = BigInt(Date.now())
     const rewardStroops = rewardXlmToStroops(params.rewardXlm)
+    const featureConfig = readStoredTaskFeatureConfig()
 
     console.log(LOG_PREFIX, `Preparing escrowed task: id=${onChainTaskId}, reward=${params.rewardXlm} XLM (${rewardStroops} stroops), agent=${params.agentType}`)
 
@@ -33,6 +37,7 @@ export async function prepareEscrowedTask(params: {
         onChainTaskId,
         rewardStroops,
         agentType: params.agentType,
+        featureConfig,
     })
 
     console.log(LOG_PREFIX, `✓ Escrow prepared. TX: ${receipt.txHash}`)
@@ -45,6 +50,8 @@ export async function prepareEscrowedTask(params: {
             contractId: receipt.contractId,
             onChainStatus: "pending" as const,
             createTxHash: receipt.txHash,
+            featureConfig: receipt.featureConfig,
+            featureState: receipt.featureState,
         },
     } satisfies PreparedOnChainTask
 }
@@ -57,11 +64,37 @@ export async function finalizeEscrowedTask(params: {
     blockchainPayload: PreparedOnChainTask["blockchainPayload"]
 }): Promise<{ txHash: string }> {
     console.log(LOG_PREFIX, `Finalizing task: dbId=${params.taskId}, chainId=${params.onChainTaskId}`)
+    const featureState = { ...params.blockchainPayload.featureState }
+
+    if (params.blockchainPayload.featureConfig.settlementMethod !== "wallet") {
+        const crossBorderResponse = await fetch("/api/cross-border/intent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                taskId: params.taskId,
+                walletAddress: params.walletAddress,
+                onChainTaskId: params.blockchainPayload.onChainTaskId,
+                rewardStroops: params.blockchainPayload.rewardStroops,
+                featureConfig: params.blockchainPayload.featureConfig,
+            }),
+        })
+
+        const crossBorderPayload = await crossBorderResponse.json().catch(() => ({}))
+        if (!crossBorderResponse.ok) {
+            throw new Error(typeof crossBorderPayload.error === "string" ? crossBorderPayload.error : "Failed to prepare cross-border anchor intent.")
+        }
+
+        featureState.crossBorderStatus = "ready"
+        featureState.crossBorderIntentId = typeof crossBorderPayload.intentId === "string" ? crossBorderPayload.intentId : null
+        featureState.crossBorderInstructions = typeof crossBorderPayload.instructions === "string" ? crossBorderPayload.instructions : null
+    }
 
     const receipt = await completeEscrowedTask({
         walletAddress: params.walletAddress,
         walletProviderId: params.walletProviderId,
         onChainTaskId: params.onChainTaskId,
+        featureConfig: params.blockchainPayload.featureConfig,
+        featureState,
         payExecutor: false,
     })
 
@@ -78,6 +111,8 @@ export async function finalizeEscrowedTask(params: {
             onChainStatus: "completed",
             createTxHash: params.blockchainPayload.createTxHash,
             completeTxHash: receipt.txHash,
+            featureConfig: params.blockchainPayload.featureConfig,
+            featureState,
         }),
     })
 
@@ -105,6 +140,8 @@ export async function rollbackEscrowedTask(params: {
         walletAddress: params.walletAddress,
         walletProviderId: params.walletProviderId,
         onChainTaskId: params.onChainTaskId,
+        featureConfig: params.blockchainPayload.featureConfig,
+        featureState: params.blockchainPayload.featureState,
     })
 
     console.log(LOG_PREFIX, `✓ On-chain cancellation confirmed. TX: ${receipt.txHash}`)
@@ -121,6 +158,8 @@ export async function rollbackEscrowedTask(params: {
                 onChainStatus: "cancelled",
                 createTxHash: params.blockchainPayload.createTxHash,
                 cancelTxHash: receipt.txHash,
+                featureConfig: params.blockchainPayload.featureConfig,
+                featureState: params.blockchainPayload.featureState,
             }),
         })
 

@@ -12,10 +12,9 @@ import {
 } from "@stellar/stellar-sdk"
 import { SOROBAN_CONFIG, sorobanConfigured } from "@/lib/soroban/config"
 import { signSorobanTransaction } from "@/lib/soroban/walletSigner"
+import { buildInitialTaskFeatureState, normalizeTaskFeatureConfig } from "@/lib/taskFeatures"
 import type { SupportedWalletId } from "@/lib/wallet/stellarWallets"
-import type { AgentType, OnChainTaskStatus } from "@/types/tasks"
-
-/* ── Types ───────────────────────────────────────────────── */
+import type { AgentType, OnChainTaskStatus, TaskFeatureConfig, TaskFeatureState } from "@/types/tasks"
 
 export type SorobanTaskLifecycleParams = {
     walletAddress: string
@@ -23,6 +22,7 @@ export type SorobanTaskLifecycleParams = {
     onChainTaskId: bigint
     rewardStroops: bigint
     agentType: AgentType
+    featureConfig: TaskFeatureConfig
 }
 
 export type SorobanTaskReceipt = {
@@ -31,19 +31,13 @@ export type SorobanTaskReceipt = {
     rewardStroops: string
     txHash: string
     onChainStatus: OnChainTaskStatus
+    featureConfig: TaskFeatureConfig
+    featureState: TaskFeatureState
 }
-
-/* ── Helpers ─────────────────────────────────────────────── */
 
 const LOG_PREFIX = "[soroban]"
 
-/**
- * Higher fee ceiling for Soroban contract invocations.
- * prepareTransaction replaces this with the simulated fee, but a higher
- * initial value prevents edge-case failures where 100 stroops is too low
- * for the initial envelope validation.
- */
-const SOROBAN_FEE = "1000000" // 0.1 XLM — simulation will set the real fee
+const SOROBAN_FEE = "1000000"
 
 function getRpcServer() {
     return new rpc.Server(SOROBAN_CONFIG.rpcUrl)
@@ -67,15 +61,16 @@ function symbolScVal(value: string) {
     return xdr.ScVal.scvSymbol(value)
 }
 
+function addressVecScVal(addresses: string[]) {
+    return xdr.ScVal.scvVec(addresses.map((address) => new Address(address).toScVal()))
+}
+
 function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => {
         window.setTimeout(resolve, ms)
     })
 }
 
-/**
- * Attempt to extract a human-readable error from a failed Soroban transaction.
- */
 function extractTxError(txResponse: rpc.Api.GetTransactionResponse): string {
     try {
         if ("resultXdr" in txResponse && txResponse.resultXdr) {
@@ -86,12 +81,11 @@ function extractTxError(txResponse: rpc.Api.GetTransactionResponse): string {
             return `Result: ${String(result)}`
         }
     } catch {
-        // Couldn't decode — return generic
+        // Ignore decode failure and fall back.
     }
+
     return "No detailed error available"
 }
-
-/* ── Core: Submit & Poll ─────────────────────────────────── */
 
 export type SubmitResult = {
     txHash: string
@@ -101,13 +95,7 @@ export type SubmitResult = {
 function normalizeOnChainTaskStatus(value: unknown): OnChainTaskStatus | null {
     if (typeof value === "string") {
         const normalized = value.trim().toLowerCase()
-        if (
-            normalized === "uninitialized" ||
-            normalized === "pending" ||
-            normalized === "completed" ||
-            normalized === "cancelled" ||
-            normalized === "failed"
-        ) {
+        if (normalized === "uninitialized" || normalized === "pending" || normalized === "completed" || normalized === "cancelled" || normalized === "failed") {
             return normalized
         }
 
@@ -134,11 +122,7 @@ function normalizeOnChainTaskStatus(value: unknown): OnChainTaskStatus | null {
         const entries = Object.entries(record)
         if (entries.length === 1) {
             const [key, nestedValue] = entries[0]
-            const fromKey = normalizeOnChainTaskStatus(key)
-            if (fromKey) return fromKey
-
-            const fromValue = normalizeOnChainTaskStatus(nestedValue)
-            if (fromValue) return fromValue
+            return normalizeOnChainTaskStatus(key) ?? normalizeOnChainTaskStatus(nestedValue)
         }
     }
 
@@ -164,22 +148,99 @@ async function reconcileTaskStatus(params: { taskId: bigint; expectedStatus: OnC
     return null
 }
 
+async function pollTransactionConfirmation(server: rpc.Server, txHash: string, params: { confirmationTaskId?: bigint; expectedTaskStatus?: OnChainTaskStatus }) {
+    const pollDelays = [500, 500, 1000, 1000, 1000, 1500, 1500, 1500, 2000, 2000, 2000, 2000, 2500, 2500, 2500, 3000, 3000]
+    let elapsed = 0
+
+    console.log(LOG_PREFIX, `Polling for confirmation (tx: ${txHash})...`)
+    for (let index = 0; index < pollDelays.length; index += 1) {
+        const delay = pollDelays[index]
+        await sleep(delay)
+        elapsed += delay
+
+        try {
+            const txResponse = await server.getTransaction(txHash)
+
+            if (txResponse.status === "SUCCESS") {
+                console.log(LOG_PREFIX, `Transaction confirmed after ~${elapsed}ms.`)
+                return {
+                    txHash,
+                    resultXdr: txResponse.returnValue,
+                } satisfies SubmitResult
+            }
+
+            if (txResponse.status === "FAILED") {
+                const detail = extractTxError(txResponse)
+                throw new Error(`Soroban transaction failed on-chain (tx: ${txHash}). ${detail}`)
+            }
+        } catch (pollError: unknown) {
+            if (pollError instanceof Error && pollError.message.includes("failed on-chain")) {
+                throw pollError
+            }
+
+            console.warn(LOG_PREFIX, `Poll #${index + 1} RPC error:`, pollError instanceof Error ? pollError.message : pollError)
+        }
+    }
+
+    if (params.confirmationTaskId && params.expectedTaskStatus) {
+        const reconciled = await reconcileTaskStatus({
+            taskId: params.confirmationTaskId,
+            expectedStatus: params.expectedTaskStatus,
+        })
+
+        if (reconciled === params.expectedTaskStatus) {
+            return { txHash, resultXdr: undefined } satisfies SubmitResult
+        }
+    }
+
+    throw new Error(
+        `Transaction not confirmed after ${Math.round(elapsed / 1000)}s. Check Stellar explorer: https://stellar.expert/explorer/testnet/tx/${txHash}`
+    )
+}
+
+async function submitSignedTransaction(params: {
+    server: rpc.Server
+    signedXdr: string
+    walletAddress: string
+    featureConfig: TaskFeatureConfig
+}) {
+    if (params.featureConfig.feeMode !== "sponsored") {
+        return params.server.sendTransaction(TransactionBuilder.fromXDR(params.signedXdr, getNetworkPassphrase()))
+    }
+
+    const response = await fetch("/api/soroban/sponsor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            signedTransactionXdr: params.signedXdr,
+            walletAddress: params.walletAddress,
+            sponsorAddress: params.featureConfig.sponsorAddress,
+        }),
+    })
+
+    const payload = await response.json().catch(() => ({}))
+    if (!response.ok) {
+        throw new Error(typeof payload.error === "string" ? payload.error : "Failed to submit sponsored transaction.")
+    }
+
+    return {
+        status: typeof payload.status === "string" ? payload.status : "PENDING",
+        hash: typeof payload.hash === "string" ? payload.hash : "",
+        errorResult: undefined,
+    }
+}
+
 async function submitContractInvocation(params: {
     walletAddress: string
     walletProviderId: SupportedWalletId | null
+    featureConfig: TaskFeatureConfig
     functionName: string
     args: xdr.ScVal[]
     confirmationTaskId?: bigint
     expectedTaskStatus?: OnChainTaskStatus
 }): Promise<SubmitResult> {
     const server = getRpcServer()
-
-    // ── 1. Load source account ──────────────────────────
-    console.log(LOG_PREFIX, `Loading account ${params.walletAddress}…`)
     const sourceAccount = await server.getAccount(params.walletAddress)
-    console.log(LOG_PREFIX, `Account loaded. Sequence: ${sourceAccount.sequenceNumber()}`)
-
-    // ── 2. Build transaction ────────────────────────────
     const tx = new TransactionBuilder(sourceAccount, {
         fee: SOROBAN_FEE,
         networkPassphrase: getNetworkPassphrase(),
@@ -194,115 +255,34 @@ async function submitContractInvocation(params: {
         .setTimeout(60)
         .build()
 
-    console.log(LOG_PREFIX, `Built tx for ${params.functionName}. XDR length: ${tx.toXDR().length}`)
-
-    // ── 3. Simulate (prepare) ───────────────────────────
-    let prepared: Awaited<ReturnType<typeof server.prepareTransaction>>
-    try {
-        prepared = await server.prepareTransaction(tx)
-        console.log(LOG_PREFIX, "Simulation/prepare succeeded.")
-    } catch (simError: unknown) {
-        const detail = simError instanceof Error ? simError.message : String(simError)
-        console.error(LOG_PREFIX, "Simulation FAILED:", detail)
-        throw new Error(`Soroban simulation failed for ${params.functionName}: ${detail}`)
-    }
-
-    // ── 4. Sign via wallet ──────────────────────────────
-    console.log(LOG_PREFIX, `Requesting wallet signature (${params.walletProviderId})…`)
+    const prepared = await server.prepareTransaction(tx)
     const signedTx = await signSorobanTransaction({
         walletType: params.walletProviderId,
         walletAddress: params.walletAddress,
         transactionXdr: prepared.toXDR(),
         networkPassphrase: getNetworkPassphrase(),
     })
-    console.log(LOG_PREFIX, "Transaction signed successfully.")
 
-    // ── 5. Submit to network ────────────────────────────
-    console.log(LOG_PREFIX, "Submitting transaction to Soroban RPC…")
-    const sendResult = await server.sendTransaction(signedTx)
+    const sendResult = await submitSignedTransaction({
+        server,
+        signedXdr: signedTx.toXDR(),
+        walletAddress: params.walletAddress,
+        featureConfig: params.featureConfig,
+    })
     const submitStatus = sendResult.status as string
     const txHash = sendResult.hash
 
-    console.log(LOG_PREFIX, `sendTransaction response — status: ${submitStatus}, hash: ${txHash}`)
-
     if (submitStatus !== "PENDING" && submitStatus !== "SUCCESS") {
         const errMsg = sendResult.errorResult?.toString() ?? "Unknown submission error"
-        console.error(LOG_PREFIX, "Transaction REJECTED by RPC:", errMsg)
         throw new Error(`Transaction rejected (${submitStatus}): ${errMsg}`)
     }
 
     if (submitStatus === "SUCCESS") {
-        console.log(LOG_PREFIX, "Transaction confirmed immediately (SUCCESS on submit).")
         return { txHash, resultXdr: undefined }
     }
 
-    // ── 6. Poll for confirmation ────────────────────────
-    // 30s total: fast start → gradual backoff
-    const pollDelays = [
-        500, 500, 1000, 1000, 1000,
-        1500, 1500, 1500, 2000, 2000,
-        2000, 2000, 2500, 2500, 2500,
-        3000, 3000,
-    ]
-    // Total: ~30s
-    let elapsed = 0
-
-    console.log(LOG_PREFIX, `Polling for confirmation (tx: ${txHash})…`)
-    for (let i = 0; i < pollDelays.length; i++) {
-        const delay = pollDelays[i]
-        await sleep(delay)
-        elapsed += delay
-
-        try {
-            const txResponse = await server.getTransaction(txHash)
-            const pollStatus = txResponse.status
-
-            if (pollStatus === "SUCCESS") {
-                console.log(LOG_PREFIX, `✓ Transaction CONFIRMED after ~${elapsed}ms (poll #${i + 1})`)
-                return {
-                    txHash,
-                    resultXdr: txResponse.returnValue,
-                }
-            }
-
-            if (pollStatus === "FAILED") {
-                const detail = extractTxError(txResponse)
-                console.error(LOG_PREFIX, `✗ Transaction FAILED on-chain after ~${elapsed}ms. ${detail}`)
-                throw new Error(`Soroban transaction failed on-chain (tx: ${txHash}). ${detail}`)
-            }
-
-            // NOT_FOUND or other → still processing
-            console.log(LOG_PREFIX, `Poll #${i + 1} (~${elapsed}ms): status=${pollStatus}, waiting…`)
-        } catch (pollError: unknown) {
-            // If it's our own thrown error, re-throw
-            if (pollError instanceof Error && pollError.message.includes("failed on-chain")) {
-                throw pollError
-            }
-            // RPC network error during poll — log and retry
-            console.warn(LOG_PREFIX, `Poll #${i + 1} RPC error:`, pollError instanceof Error ? pollError.message : pollError)
-        }
-    }
-
-    // Timed out — but tx might still confirm later
-    if (params.confirmationTaskId && params.expectedTaskStatus) {
-        const reconciledStatus = await reconcileTaskStatus({
-            taskId: params.confirmationTaskId,
-            expectedStatus: params.expectedTaskStatus,
-        })
-
-        if (reconciledStatus === params.expectedTaskStatus) {
-            return { txHash, resultXdr: undefined }
-        }
-    }
-
-    console.error(LOG_PREFIX, `Timed out after ~${elapsed}ms. TX hash: ${txHash}`)
-    throw new Error(
-        `Transaction not confirmed after ${Math.round(elapsed / 1000)}s. ` +
-        `Check Stellar explorer: https://stellar.expert/explorer/testnet/tx/${txHash}`
-    )
+    return pollTransactionConfirmation(server, txHash, params)
 }
-
-/* ── Public API ──────────────────────────────────────────── */
 
 export function rewardXlmToStroops(rewardXlm: string) {
     const trimmed = rewardXlm.trim()
@@ -317,29 +297,38 @@ export function rewardXlmToStroops(rewardXlm: string) {
 
 export async function createEscrowedTask(params: SorobanTaskLifecycleParams): Promise<SorobanTaskReceipt> {
     requireSorobanSupport(params.walletProviderId)
-    console.log(LOG_PREFIX, `Creating escrowed task: id=${params.onChainTaskId}, reward=${params.rewardStroops} stroops, agent=${params.agentType}`)
+    const featureConfig = normalizeTaskFeatureConfig(params.featureConfig)
+    const featureState = buildInitialTaskFeatureState(featureConfig)
 
     const receipt = await submitContractInvocation({
         walletAddress: params.walletAddress,
         walletProviderId: params.walletProviderId as SupportedWalletId | null,
+        featureConfig,
         functionName: "create_task",
         args: [
             nativeToScVal(params.onChainTaskId, { type: "u64" }),
             new Address(params.walletAddress).toScVal(),
             symbolScVal(params.agentType),
             nativeToScVal(params.rewardStroops, { type: "i128" }),
+            symbolScVal(featureConfig.settlementMethod),
+            symbolScVal(featureConfig.approvalMode),
+            nativeToScVal(featureConfig.requiredApprovals, { type: "u32" }),
+            symbolScVal(featureConfig.authMode),
+            new Address(featureConfig.smartWalletAddress ?? params.walletAddress).toScVal(),
+            addressVecScVal(featureConfig.approvers),
         ],
         confirmationTaskId: params.onChainTaskId,
         expectedTaskStatus: "pending",
     })
 
-    console.log(LOG_PREFIX, `✓ Escrow created. TX: ${receipt.txHash}`)
     return {
         contractId: SOROBAN_CONFIG.contractId,
         onChainTaskId: params.onChainTaskId.toString(),
         rewardStroops: params.rewardStroops.toString(),
         txHash: receipt.txHash,
         onChainStatus: "pending",
+        featureConfig,
+        featureState,
     }
 }
 
@@ -349,14 +338,17 @@ export async function completeEscrowedTask(params: {
     walletAddress: string
     walletProviderId: string | null
     onChainTaskId: bigint
+    featureConfig: TaskFeatureConfig
+    featureState: TaskFeatureState
     payExecutor?: boolean
 }): Promise<SorobanTaskReceipt> {
     requireSorobanSupport(params.walletProviderId)
-    console.log(LOG_PREFIX, `Completing task: id=${params.onChainTaskId}, payExecutor=${params.payExecutor ?? false}`)
+    const featureConfig = normalizeTaskFeatureConfig(params.featureConfig)
 
     const receipt = await submitContractInvocation({
         walletAddress: params.walletAddress,
         walletProviderId: params.walletProviderId as SupportedWalletId | null,
+        featureConfig,
         functionName: "complete_task",
         args: [
             nativeToScVal(params.onChainTaskId, { type: "u64" }),
@@ -367,13 +359,14 @@ export async function completeEscrowedTask(params: {
         expectedTaskStatus: "completed",
     })
 
-    console.log(LOG_PREFIX, `✓ Task completed on-chain. TX: ${receipt.txHash}`)
     return {
         contractId: SOROBAN_CONFIG.contractId,
         onChainTaskId: params.onChainTaskId.toString(),
         rewardStroops: "0",
         txHash: receipt.txHash,
         onChainStatus: "completed",
+        featureConfig,
+        featureState: params.featureState,
     }
 }
 
@@ -383,13 +376,16 @@ export async function cancelEscrowedTask(params: {
     walletAddress: string
     walletProviderId: string | null
     onChainTaskId: bigint
+    featureConfig: TaskFeatureConfig
+    featureState: TaskFeatureState
 }): Promise<SorobanTaskReceipt> {
     requireSorobanSupport(params.walletProviderId)
-    console.log(LOG_PREFIX, `Cancelling task: id=${params.onChainTaskId}`)
+    const featureConfig = normalizeTaskFeatureConfig(params.featureConfig)
 
     const receipt = await submitContractInvocation({
         walletAddress: params.walletAddress,
         walletProviderId: params.walletProviderId as SupportedWalletId | null,
+        featureConfig,
         functionName: "cancel_task",
         args: [
             nativeToScVal(params.onChainTaskId, { type: "u64" }),
@@ -399,17 +395,72 @@ export async function cancelEscrowedTask(params: {
         expectedTaskStatus: "cancelled",
     })
 
-    console.log(LOG_PREFIX, `✓ Task cancelled on-chain. TX: ${receipt.txHash}`)
     return {
         contractId: SOROBAN_CONFIG.contractId,
         onChainTaskId: params.onChainTaskId.toString(),
         rewardStroops: "0",
         txHash: receipt.txHash,
         onChainStatus: "cancelled",
+        featureConfig,
+        featureState: params.featureState,
     }
 }
 
 export const cancelTaskOnChain = cancelEscrowedTask
+
+export async function approveEscrowedTask(params: {
+    walletAddress: string
+    walletProviderId: string | null
+    onChainTaskId: bigint
+    featureConfig: TaskFeatureConfig
+}) {
+    requireSorobanSupport(params.walletProviderId)
+    const featureConfig = normalizeTaskFeatureConfig(params.featureConfig)
+
+    const receipt = await submitContractInvocation({
+        walletAddress: params.walletAddress,
+        walletProviderId: params.walletProviderId as SupportedWalletId | null,
+        featureConfig,
+        functionName: "approve_task",
+        args: [
+            nativeToScVal(params.onChainTaskId, { type: "u64" }),
+            new Address(params.walletAddress).toScVal(),
+        ],
+        confirmationTaskId: params.onChainTaskId,
+        expectedTaskStatus: "pending",
+    })
+
+    return {
+        txHash: receipt.txHash,
+    }
+}
+
+export async function registerSmartWalletOnChain(params: {
+    walletAddress: string
+    walletProviderId: string | null
+    smartWalletAddress: string
+    policy: string
+    featureConfig: TaskFeatureConfig
+}) {
+    requireSorobanSupport(params.walletProviderId)
+    const featureConfig = normalizeTaskFeatureConfig(params.featureConfig)
+
+    const receipt = await submitContractInvocation({
+        walletAddress: params.walletAddress,
+        walletProviderId: params.walletProviderId as SupportedWalletId | null,
+        featureConfig,
+        functionName: "set_smart_wallet",
+        args: [
+            new Address(params.walletAddress).toScVal(),
+            new Address(params.smartWalletAddress).toScVal(),
+            symbolScVal(params.policy || "delegate"),
+        ],
+    })
+
+    return {
+        txHash: receipt.txHash,
+    }
+}
 
 export async function fetchOnChainTask(params: { taskId: bigint }) {
     const server = getRpcServer()

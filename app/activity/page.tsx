@@ -220,6 +220,8 @@ function TaskCard({ task }: { task: TaskRecord }) {
     const StatusIcon = statusCfg.icon
     const chainCfg = CHAIN_STATUS_LABELS[task.on_chain_status] ?? CHAIN_STATUS_LABELS.uninitialized
     const rewardXlm = task.reward_stroops ? (Number(task.reward_stroops) / 10_000_000).toFixed(7) : null
+    const featureConfig = task.feature_config
+    const featureState = task.feature_state
 
     return (
         <div className="rounded-xl border border-border bg-surface p-4 transition-colors hover:bg-surface-elevated">
@@ -277,6 +279,34 @@ function TaskCard({ task }: { task: TaskRecord }) {
                 {/* On-chain Task ID */}
                 {task.on_chain_task_id && (
                     <DetailItem label="On-chain ID" value={task.on_chain_task_id} />
+                )}
+
+                {featureConfig && (
+                    <DetailItem label="Fee" value={featureConfig.feeMode === "sponsored" ? "Sponsored" : "User Paid"} />
+                )}
+
+                {featureConfig && (
+                    <DetailItem label="Settlement" value={featureConfig.settlementMethod.toUpperCase()} />
+                )}
+
+                {featureConfig && (
+                    <DetailItem
+                        label="Auth"
+                        value={featureConfig.authMode === "smart" ? `Smart (${featureConfig.smartWalletAddress ?? "unregistered"})` : "Wallet"}
+                    />
+                )}
+
+                {featureConfig && (
+                    <DetailItem
+                        label="Approvals"
+                        value={featureConfig.approvalMode === "multisig"
+                            ? `${featureState?.approvalCount ?? 0}/${featureConfig.requiredApprovals}`
+                            : "Single signer"}
+                    />
+                )}
+
+                {featureState?.crossBorderInstructions && (
+                    <DetailItem label="Anchor Handoff" value={featureState.crossBorderInstructions} />
                 )}
             </div>
         </div>

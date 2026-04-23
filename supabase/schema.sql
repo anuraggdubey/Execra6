@@ -23,6 +23,8 @@ create table if not exists public.tasks (
     create_tx_hash text,
     complete_tx_hash text,
     cancel_tx_hash text,
+    feature_config jsonb not null default '{}'::jsonb,
+    feature_state jsonb not null default '{}'::jsonb,
     created_at timestamptz not null default now()
 );
 

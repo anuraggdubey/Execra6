@@ -9,7 +9,8 @@ import {
 } from "@stellar/stellar-sdk"
 import { AgentExecutionError } from "@/lib/agents/shared"
 import { SOROBAN_CONFIG, sorobanConfigured } from "@/lib/soroban/config"
-import type { AgentType, OnChainTaskStatus } from "@/types/tasks"
+import { normalizeTaskFeatureConfig, normalizeTaskFeatureState } from "@/lib/taskFeatures"
+import type { AgentType, OnChainTaskStatus, TaskFeatureConfig, TaskFeatureState } from "@/types/tasks"
 
 const SOROBAN_FEE = "1000000"
 
@@ -19,6 +20,8 @@ export type EscrowBlockchainPayload = {
     contractId: string
     onChainStatus: OnChainTaskStatus
     createTxHash: string
+    featureConfig: TaskFeatureConfig
+    featureState: TaskFeatureState
 }
 
 type NormalizedOnChainTask = {
@@ -61,6 +64,8 @@ function requireEscrowPayload(value: unknown): EscrowBlockchainPayload {
         contractId: payload.contractId,
         onChainStatus: payload.onChainStatus as OnChainTaskStatus,
         createTxHash: payload.createTxHash,
+        featureConfig: normalizeTaskFeatureConfig(payload.featureConfig),
+        featureState: normalizeTaskFeatureState(payload.featureState),
     }
 }
 

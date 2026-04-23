@@ -6,7 +6,8 @@ import { createAgentRun, createTask, failTask, updateTask } from "@/lib/services
 import { sendGeneratedEmail } from "@/lib/services/emailService"
 import { upsertUserByWallet } from "@/lib/services/userService"
 import { requireEmailAddress, requireNonEmptyText, requireWalletAddress } from "@/lib/services/validation"
-import type { OnChainTaskStatus } from "@/types/tasks"
+import { normalizeTaskFeatureConfig, normalizeTaskFeatureState } from "@/lib/taskFeatures"
+import type { OnChainTaskStatus, TaskFeatureConfig, TaskFeatureState } from "@/types/tasks"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -31,6 +32,8 @@ type BlockchainPayload = {
     contractId: string
     onChainStatus: OnChainTaskStatus
     createTxHash: string
+    featureConfig: TaskFeatureConfig
+    featureState: TaskFeatureState
 }
 
 function requireAction(value: unknown): EmailRouteAction {
@@ -77,6 +80,8 @@ function requireBlockchainPayload(value: unknown): BlockchainPayload {
         contractId: payload.contractId,
         onChainStatus: payload.onChainStatus as OnChainTaskStatus,
         createTxHash: payload.createTxHash,
+        featureConfig: normalizeTaskFeatureConfig(payload.featureConfig),
+        featureState: normalizeTaskFeatureState(payload.featureState),
     }
 }
 

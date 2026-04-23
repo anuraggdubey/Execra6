@@ -22,6 +22,10 @@ Excera currently includes:
 - `Email Agent` for drafting email responses from a prompt
 - wallet-based identity using supported Stellar wallets
 - Soroban escrow tracking for task creation, completion, and cancellation
+- basic fee-sponsored Soroban submissions using a sponsor-side fee bump API
+- basic SEP-24 / SEP-31 anchor handoff intents tied to escrow task completion
+- basic multisig approvals for escrowed tasks before completion
+- basic smart-wallet delegate registration for custom task auth
 - Supabase-backed users, tasks, agent runs, and activity history
 
 ## Stack
@@ -118,6 +122,7 @@ NEXT_PUBLIC_SOROBAN_NETWORK=testnet
 NEXT_PUBLIC_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 NEXT_PUBLIC_SOROBAN_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
 NEXT_PUBLIC_STELLAR_XLM_SAC_ID=your_testnet_xlm_sac_id
+SOROBAN_SPONSOR_SECRET=your_fee_sponsor_secret_key
 ```
 
 ### Email And Search Integrations
@@ -150,6 +155,7 @@ npm install
 supabase/browser_agent_migration.sql
 supabase/email_agent_migration.sql
 supabase/web_search_agent_migration.sql
+supabase/task_features_migration.sql
 ```
 
 6. Start the app.
@@ -177,6 +183,25 @@ npm run import:legacy-projects
 - run the selected agent workflow
 - sign the final completion transaction
 - review task history and on-chain status in the app
+
+## Advanced Contract Features
+
+The Soroban escrow contract and task flow now support four basic feature extensions:
+
+- `Fee Sponsorship`: new task transactions can use the `/api/soroban/sponsor` route to wrap user-signed contract calls in a sponsor-paid fee bump
+- `Cross-border Flows`: tasks can mark `SEP-24` or `SEP-31` settlement, and completion creates an anchor handoff intent through `/api/cross-border/intent`
+- `Multi-signature Logic`: tasks can require multiple listed approvers before `complete_task`
+- `Account Abstraction`: owners can register a delegate smart wallet on-chain and create tasks that allow delegate auth
+
+### What You Need To Do
+
+1. Redeploy the updated Soroban contract from [`contracts/task_escrow`](./contracts/task_escrow).
+2. Update `.env.local` with the new deployed contract ID and add `SOROBAN_SPONSOR_SECRET`.
+3. Run `supabase/task_features_migration.sql`.
+4. Open `/settings` and save your default advanced task options.
+5. If using smart-wallet auth, register the delegate from `/settings` with the owner wallet connected.
+6. If using multisig, have each approver connect their wallet and approve the on-chain task ID from `/settings`.
+7. If using SEP-24 or SEP-31, set the anchor URL and destination details in `/settings` before running the task.
 
 ## Architecture
 

@@ -1,12 +1,13 @@
 import { AgentExecutionError } from "@/lib/agents/shared"
 import { getSupabaseServerClient } from "@/lib/supabaseServer"
+import { buildInitialTaskFeatureState, normalizeTaskFeatureConfig, normalizeTaskFeatureState } from "@/lib/taskFeatures"
 import {
     requireAgentType,
     requireOnChainTaskStatus,
     requireTaskStatus,
     requireWalletAddress,
 } from "@/lib/services/validation"
-import type { OnChainTaskStatus, TaskOutputResult, TaskRecord, TaskStatus } from "@/types/tasks"
+import type { OnChainTaskStatus, TaskFeatureConfig, TaskFeatureState, TaskOutputResult, TaskRecord, TaskStatus } from "@/types/tasks"
 
 type CreateTaskInput = {
     walletAddress: unknown
@@ -21,6 +22,8 @@ type CreateTaskInput = {
         createTxHash?: string | null
         completeTxHash?: string | null
         cancelTxHash?: string | null
+        featureConfig?: TaskFeatureConfig | null
+        featureState?: TaskFeatureState | null
     }
 }
 
@@ -36,6 +39,8 @@ type UpdateTaskInput = {
         createTxHash?: string | null
         completeTxHash?: string | null
         cancelTxHash?: string | null
+        featureConfig?: TaskFeatureConfig | null
+        featureState?: TaskFeatureState | null
     }
 }
 
@@ -48,6 +53,8 @@ export async function createTask(input: CreateTaskInput) {
     const agentType = requireAgentType(input.agentType)
     const inputPrompt = typeof input.inputPrompt === "string" ? input.inputPrompt.trim() : ""
     const status = input.status ? requireTaskStatus(input.status) : "pending"
+    const featureConfig = normalizeTaskFeatureConfig(input.blockchain?.featureConfig)
+    const featureState = normalizeTaskFeatureState(input.blockchain?.featureState ?? buildInitialTaskFeatureState(featureConfig))
     const supabase = getSupabaseServerClient()
 
     const { data, error } = await supabase
@@ -64,8 +71,10 @@ export async function createTask(input: CreateTaskInput) {
             create_tx_hash: input.blockchain?.createTxHash ?? null,
             complete_tx_hash: input.blockchain?.completeTxHash ?? null,
             cancel_tx_hash: input.blockchain?.cancelTxHash ?? null,
+            feature_config: featureConfig,
+            feature_state: featureState,
         })
-        .select("id, wallet_address, agent_type, input_prompt, output_result, status, on_chain_task_id, reward_stroops, contract_id, on_chain_status, create_tx_hash, complete_tx_hash, cancel_tx_hash, created_at")
+        .select("id, wallet_address, agent_type, input_prompt, output_result, status, on_chain_task_id, reward_stroops, contract_id, on_chain_status, create_tx_hash, complete_tx_hash, cancel_tx_hash, feature_config, feature_state, created_at")
         .single()
 
     if (error) {
@@ -89,6 +98,8 @@ export async function updateTask(input: UpdateTaskInput) {
         create_tx_hash?: string | null
         complete_tx_hash?: string | null
         cancel_tx_hash?: string | null
+        feature_config?: TaskFeatureConfig
+        feature_state?: TaskFeatureState
     } = { status }
 
     if (input.outputResult !== undefined) {
@@ -105,13 +116,19 @@ export async function updateTask(input: UpdateTaskInput) {
         if ("createTxHash" in input.blockchain) updates.create_tx_hash = input.blockchain.createTxHash ?? null
         if ("completeTxHash" in input.blockchain) updates.complete_tx_hash = input.blockchain.completeTxHash ?? null
         if ("cancelTxHash" in input.blockchain) updates.cancel_tx_hash = input.blockchain.cancelTxHash ?? null
+        if ("featureConfig" in input.blockchain && input.blockchain.featureConfig !== undefined) {
+            updates.feature_config = normalizeTaskFeatureConfig(input.blockchain.featureConfig)
+        }
+        if ("featureState" in input.blockchain && input.blockchain.featureState !== undefined) {
+            updates.feature_state = normalizeTaskFeatureState(input.blockchain.featureState)
+        }
     }
 
     const { data, error } = await supabase
         .from("tasks")
         .update(updates)
         .eq("id", input.taskId)
-        .select("id, wallet_address, agent_type, input_prompt, output_result, status, on_chain_task_id, reward_stroops, contract_id, on_chain_status, create_tx_hash, complete_tx_hash, cancel_tx_hash, created_at")
+        .select("id, wallet_address, agent_type, input_prompt, output_result, status, on_chain_task_id, reward_stroops, contract_id, on_chain_status, create_tx_hash, complete_tx_hash, cancel_tx_hash, feature_config, feature_state, created_at")
         .single()
 
     if (error) {
@@ -155,7 +172,7 @@ export async function getUserTasks(walletAddressInput: unknown, limit = 20) {
 
     const { data, error } = await supabase
         .from("tasks")
-        .select("id, wallet_address, agent_type, input_prompt, output_result, status, on_chain_task_id, reward_stroops, contract_id, on_chain_status, create_tx_hash, complete_tx_hash, cancel_tx_hash, created_at")
+        .select("id, wallet_address, agent_type, input_prompt, output_result, status, on_chain_task_id, reward_stroops, contract_id, on_chain_status, create_tx_hash, complete_tx_hash, cancel_tx_hash, feature_config, feature_state, created_at")
         .eq("wallet_address", walletAddress)
         .order("created_at", { ascending: false })
         .limit(limit)
@@ -172,7 +189,7 @@ export async function getRecentTasks(limit = 10) {
 
     const { data, error } = await supabase
         .from("tasks")
-        .select("id, wallet_address, agent_type, input_prompt, output_result, status, on_chain_task_id, reward_stroops, contract_id, on_chain_status, create_tx_hash, complete_tx_hash, cancel_tx_hash, created_at")
+        .select("id, wallet_address, agent_type, input_prompt, output_result, status, on_chain_task_id, reward_stroops, contract_id, on_chain_status, create_tx_hash, complete_tx_hash, cancel_tx_hash, feature_config, feature_state, created_at")
         .order("created_at", { ascending: false })
         .limit(limit)
 
@@ -188,7 +205,7 @@ export async function getTaskById(taskId: string) {
 
     const { data, error } = await supabase
         .from("tasks")
-        .select("id, wallet_address, agent_type, input_prompt, output_result, status, on_chain_task_id, reward_stroops, contract_id, on_chain_status, create_tx_hash, complete_tx_hash, cancel_tx_hash, created_at")
+        .select("id, wallet_address, agent_type, input_prompt, output_result, status, on_chain_task_id, reward_stroops, contract_id, on_chain_status, create_tx_hash, complete_tx_hash, cancel_tx_hash, feature_config, feature_state, created_at")
         .eq("id", taskId)
         .single()
 

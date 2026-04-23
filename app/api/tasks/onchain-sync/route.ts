@@ -13,6 +13,8 @@ export async function POST(req: Request) {
             createTxHash,
             completeTxHash,
             cancelTxHash,
+            featureConfig,
+            featureState,
         } = await req.json()
 
         const task = await updateTask({
@@ -26,6 +28,8 @@ export async function POST(req: Request) {
                 createTxHash: createTxHash ?? null,
                 completeTxHash: completeTxHash ?? null,
                 cancelTxHash: cancelTxHash ?? null,
+                featureConfig: featureConfig ?? undefined,
+                featureState: featureState ?? undefined,
             },
         })
 

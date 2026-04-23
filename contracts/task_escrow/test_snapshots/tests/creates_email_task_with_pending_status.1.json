@@ -94,6 +94,24 @@
                     "hi": 0,
                     "lo": 1250000
                   }
+                },
+                {
+                  "symbol": "wallet"
+                },
+                {
+                  "symbol": "single"
+                },
+                {
+                  "u32": 1
+                },
+                {
+                  "symbol": "wallet"
+                },
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                },
+                {
+                  "vec": []
                 }
               ]
             }
@@ -346,6 +364,46 @@
                     },
                     {
                       "key": {
+                        "symbol": "approval_count"
+                      },
+                      "val": {
+                        "u32": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "approval_mode"
+                      },
+                      "val": {
+                        "symbol": "single"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "approvers"
+                      },
+                      "val": {
+                        "vec": []
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "auth_mode"
+                      },
+                      "val": {
+                        "symbol": "wallet"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "required_approvals"
+                      },
+                      "val": {
+                        "u32": 1
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "reward"
                       },
                       "val": {
@@ -353,6 +411,22 @@
                           "hi": 0,
                           "lo": 1250000
                         }
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "settlement_method"
+                      },
+                      "val": {
+                        "symbol": "wallet"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "smart_wallet"
+                      },
+                      "val": {
+                        "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                       }
                     },
                     {
