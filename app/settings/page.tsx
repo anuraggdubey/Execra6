@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Check, Copy, RefreshCw, Save, ShieldCheck, Wallet } from "lucide-react"
 import { useHasMounted } from "@/lib/useHasMounted"
 import ConnectWalletButton from "@/components/wallet/ConnectWalletButton"
@@ -25,16 +25,13 @@ export default function SettingsPage() {
     const { disconnectWallet, refreshBalance, walletAddress, walletBalance, walletProviderId } = useWalletContext()
     const mounted = useHasMounted()
     const [copied, setCopied] = useState(false)
-    const [featureConfig, setFeatureConfig] = useState<TaskFeatureConfig>(DEFAULT_TASK_FEATURE_CONFIG)
+    const [featureConfig, setFeatureConfig] = useState<TaskFeatureConfig>(() => (
+        typeof window === "undefined" ? DEFAULT_TASK_FEATURE_CONFIG : readStoredTaskFeatureConfig()
+    ))
     const [saveMessage, setSaveMessage] = useState<string | null>(null)
     const [approvalTaskId, setApprovalTaskId] = useState("")
     const [actionState, setActionState] = useState<string | null>(null)
     const [actionError, setActionError] = useState<string | null>(null)
-
-    useEffect(() => {
-        if (!mounted) return
-        setFeatureConfig(readStoredTaskFeatureConfig())
-    }, [mounted])
 
     const handleCopy = async () => {
         if (!walletAddress) return

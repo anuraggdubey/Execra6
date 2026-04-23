@@ -14,8 +14,19 @@ concurrency:
 
 jobs:
   validate:
-    name: Lint and Build
+    name: Lint, Build, and Contract Test
     runs-on: ubuntu-latest
+    env:
+      APP_URL: http://localhost:3001
+      OPENAI_API_KEY: ci-placeholder
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+      NEXT_PUBLIC_SOROBAN_CONTRACT_ID: CA6MESAPUDXH4AJJY45WRYWBX4EIQL7XOY3XKC3WZZXCNIDGGHSC2GKB
+      NEXT_PUBLIC_SOROBAN_NETWORK: testnet
+      NEXT_PUBLIC_SOROBAN_RPC_URL: https://soroban-testnet.stellar.org
+      NEXT_PUBLIC_SOROBAN_NETWORK_PASSPHRASE: Test SDF Network ; September 2015
+      NEXT_PUBLIC_STELLAR_XLM_SAC_ID: CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
 
     steps:
       - name: Checkout repository
@@ -30,8 +41,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts/task_escrow
+
       - name: Run ESLint
         run: npm run lint
 
       - name: Build application
         run: npm run build
+
+      - name: Run Soroban contract tests
+        working-directory: contracts/task_escrow
+        run: cargo test

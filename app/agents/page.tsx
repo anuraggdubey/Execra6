@@ -842,11 +842,6 @@ export default function AgentsPage() {
     )
 }
 
-function WorkspaceStat(_props: { label: string; value: string }) {
-    // Legacy component — now handled inline with workspace-stat classes
-    return null
-}
-
 function StatusPill({ state }: { state: RunState }) {
     const label =
         state === "running" ? "Running" :

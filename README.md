@@ -69,7 +69,7 @@ This project is configured for `Stellar Testnet`.
 
 ### Deployed Contract
 
-- Soroban Contract ID: `CDXU5JFTCBO4AKPI2TVQ2BGC352IYXMOIIGPRYXGK247HHMOALKBLJUP`
+- Soroban Contract ID: `CA6MESAPUDXH4AJJY45WRYWBX4EIQL7XOY3XKC3WZZXCNIDGGHSC2GKB`
 - Native XLM Stellar Asset Contract ID: `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`
 - Contract package path: [`contracts/task_escrow`](./contracts/task_escrow)
 
@@ -78,7 +78,10 @@ This project is configured for `Stellar Testnet`.
 - `init(admin, token_contract)`
 - `set_executor(executor, allowed)`
 - `is_executor(executor)`
-- `create_task(task_id, user, agent_type, reward)`
+- `set_smart_wallet(owner, smart_wallet, auth_policy)`
+- `get_smart_wallet(owner)`
+- `create_task(task_id, user, agent_type, reward, settlement_method, approval_mode, required_approvals, auth_mode, smart_wallet, approvers)`
+- `approve_task(task_id, approver)`
 - `complete_task(task_id, caller, pay_executor)`
 - `cancel_task(task_id, caller)`
 - `get_task(task_id)`
@@ -202,6 +205,12 @@ The Soroban escrow contract and task flow now support four basic feature extensi
 5. If using smart-wallet auth, register the delegate from `/settings` with the owner wallet connected.
 6. If using multisig, have each approver connect their wallet and approve the on-chain task ID from `/settings`.
 7. If using SEP-24 or SEP-31, set the anchor URL and destination details in `/settings` before running the task.
+
+### Current Local Setup Status
+
+- Contract redeployed on Stellar testnet
+- `.env.local` updated with the new `NEXT_PUBLIC_SOROBAN_CONTRACT_ID`
+- `.env.local` updated with `SOROBAN_SPONSOR_SECRET` for sponsor fee bumps
 
 ## Architecture
 

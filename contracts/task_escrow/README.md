@@ -4,7 +4,7 @@ This contract escrows native Stellar value through the Stellar Asset Contract (S
 
 ## Current Testnet Deployment
 
-- Contract ID: `CDXU5JFTCBO4AKPI2TVQ2BGC352IYXMOIIGPRYXGK247HHMOALKBLJUP`
+- Contract ID: `CA6MESAPUDXH4AJJY45WRYWBX4EIQL7XOY3XKC3WZZXCNIDGGHSC2GKB`
 - Admin / executor used for deployment validation: `GDBUNBHJO2R4B3KDAGDBQXC2ZCUCZTIMAAATA4OUOCBQQ3LUETFZHR3V`
 - Native XLM SAC ID: `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`
 
@@ -13,7 +13,10 @@ This contract escrows native Stellar value through the Stellar Asset Contract (S
 - `init(admin, token_contract)`
 - `set_executor(executor, allowed)`
 - `is_executor(executor)`
-- `create_task(task_id, user, agent_type, reward)`
+- `set_smart_wallet(owner, smart_wallet, auth_policy)`
+- `get_smart_wallet(owner)`
+- `create_task(task_id, user, agent_type, reward, settlement_method, approval_mode, required_approvals, auth_mode, smart_wallet, approvers)`
+- `approve_task(task_id, approver)`
 - `complete_task(task_id, caller, pay_executor)`
 - `cancel_task(task_id, caller)`
 - `get_task(task_id)`
@@ -69,6 +72,19 @@ stellar contract invoke \
   -- set_executor \
   --executor YOUR_EXECUTOR_ADDRESS \
   --allowed true
+```
+
+Register a smart wallet delegate:
+
+```bash
+stellar contract invoke \
+  --id YOUR_CONTRACT_ID \
+  --source your-testnet-identity \
+  --network testnet \
+  -- set_smart_wallet \
+  --owner YOUR_OWNER_ADDRESS \
+  --smart_wallet YOUR_DELEGATE_ADDRESS \
+  --auth_policy delegate
 ```
 
 Verify:
