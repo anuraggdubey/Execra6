@@ -10,6 +10,7 @@ import React, {
 } from "react"
 import { v4 as uuidv4 } from "uuid"
 import { Agent } from "@/types/agent"
+import { useHasMounted } from "@/lib/useHasMounted"
 
 export interface ActivityLog {
     id: string
@@ -170,22 +171,46 @@ function createActivity(
 }
 
 export function AgentProvider({ children }: { children: ReactNode }) {
+    const mounted = useHasMounted()
+
+    if (!mounted) {
+        return (
+            <AgentContext.Provider
+                value={{
+                    agents: PLATFORM_AGENTS,
+                    activities: [],
+                    startAgentRun: () => undefined,
+                    completeAgentRun: () => undefined,
+                    failAgentRun: () => undefined,
+                    logAgentEvent: () => undefined,
+                }}
+            >
+                {children}
+            </AgentContext.Provider>
+        )
+    }
+
+    return <HydratedAgentProvider>{children}</HydratedAgentProvider>
+}
+
+function HydratedAgentProvider({ children }: { children: ReactNode }) {
     const [agents, setAgents] = useState<Agent[]>(() =>
         normalizeAgents(readStorage(STORAGE_KEYS.agents, PLATFORM_AGENTS, LEGACY_AGENT_KEYS))
     )
     const [activities, setActivities] = useState<ActivityLog[]>(() =>
         readStorage<ActivityLog[]>(STORAGE_KEYS.activities, [], LEGACY_ACTIVITY_KEYS)
     )
+    const isHydrated = true
 
     useEffect(() => {
-        if (typeof window === "undefined") return
+        if (typeof window === "undefined" || !isHydrated) return
         window.localStorage.setItem(STORAGE_KEYS.agents, JSON.stringify(agents))
-    }, [agents])
+    }, [agents, isHydrated])
 
     useEffect(() => {
-        if (typeof window === "undefined") return
+        if (typeof window === "undefined" || !isHydrated) return
         window.localStorage.setItem(STORAGE_KEYS.activities, JSON.stringify(activities))
-    }, [activities])
+    }, [activities, isHydrated])
 
     const findAgent = useCallback(
         (agentIdOrName: string) =>

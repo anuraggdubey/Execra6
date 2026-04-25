@@ -7,7 +7,10 @@ The featured advanced capability in this version is **Fee Sponsorship**, where u
 
 ## Live Demo
 
-[Open Execra](https://execra6-ai.vercel.app)
+[Open Execra](https://execra.onrender.com)
+
+## Video Demo
+[Video Demo](https://drive.google.com/file/d/1UlANTTOKPK3bu8j2Bnh0_d_xY3OQfL0B/view?usp=sharing)
 
 ## At a Glance
 
@@ -58,13 +61,13 @@ Execra has been tested with **30+ testnet users**.
 
 ### Metrics Dashboard
 
-- [Live Metrics Dashboard](https://execra6-ai.vercel.app/dashboard)
+- [Live Metrics Dashboard](https://execra.onrender.com/dashboard)
 
 ![Metrics Dashboard](./Screenshots/metricsdash.png)
 
 ### Monitoring Dashboard
 
-- [Live Monitoring View](https://execra6-ai.vercel.app/api/platform-status)
+- [Live Monitoring View](https://execra.onrender.com/api/platform-status)
 
 ![Monitoring Dashboard](./Screenshots/monitordash.png)
 ![Agents Visible](./Screenshots/agents.png)
@@ -75,7 +78,8 @@ Execra has been tested with **30+ testnet users**.
 
 ### Community Contribution
 
-- Twitter post link: `https://twitter.com/your-handle/status/your-post-id`
+- [Twitter post link](https://x.com/anuraggdubeyy/status/2048052847737184593?s=20)
+![Post](./Screenshots/xpost.png)
 
 ## Advanced Feature
 

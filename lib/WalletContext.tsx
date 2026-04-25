@@ -98,8 +98,8 @@ function formatWalletAddress(address: string | null) {
 }
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-    const [walletAddress, setWalletAddress] = useState<string | null>(() => readWalletSession()?.walletAddress ?? null)
-    const [walletProviderId, setWalletProviderId] = useState<SupportedWalletId | null>(() => readWalletSession()?.walletProviderId ?? null)
+    const [walletAddress, setWalletAddress] = useState<string | null>(null)
+    const [walletProviderId, setWalletProviderId] = useState<SupportedWalletId | null>(null)
     const [walletBalance, setWalletBalance] = useState<string | null>(null)
     const [supportedWallets, setSupportedWallets] = useState<SupportedStellarWallet[]>([])
     const [isHydrated, setIsHydrated] = useState(false)
