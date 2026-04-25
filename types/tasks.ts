@@ -3,38 +3,13 @@ export type AgentType = "github" | "coding" | "document" | "email" | "search" | 
 export type TaskStatus = "pending" | "completed" | "failed"
 export type OnChainTaskStatus = "uninitialized" | "pending" | "completed" | "cancelled" | "failed"
 export type FeeMode = "user" | "sponsored"
-export type SettlementMethod = "wallet" | "sep24" | "sep31"
-export type ApprovalMode = "single" | "multisig"
-export type AuthMode = "wallet" | "smart"
-export type CrossBorderStatus = "not_requested" | "pending" | "ready" | "submitted"
-
-export type AnchorConfiguration = {
-    anchorName: string | null
-    anchorUrl: string | null
-    assetCode: string | null
-    destination: string | null
-}
 
 export type TaskFeatureConfig = {
     feeMode: FeeMode
-    settlementMethod: SettlementMethod
-    approvalMode: ApprovalMode
-    requiredApprovals: number
-    approvers: string[]
-    authMode: AuthMode
-    smartWalletAddress: string | null
-    smartWalletPolicy: string | null
     sponsorAddress: string | null
-    anchor: AnchorConfiguration
 }
 
-export type TaskFeatureState = {
-    approvalCount: number
-    approvedBy: string[]
-    crossBorderStatus: CrossBorderStatus
-    crossBorderIntentId: string | null
-    crossBorderInstructions: string | null
-}
+export type TaskFeatureState = Record<string, never>
 
 export type CodingTaskOutput =
     | {

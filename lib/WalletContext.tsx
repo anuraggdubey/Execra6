@@ -98,8 +98,8 @@ function formatWalletAddress(address: string | null) {
 }
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-    const [walletAddress, setWalletAddress] = useState<string | null>(null)
-    const [walletProviderId, setWalletProviderId] = useState<SupportedWalletId | null>(null)
+    const [walletAddress, setWalletAddress] = useState<string | null>(() => readWalletSession()?.walletAddress ?? null)
+    const [walletProviderId, setWalletProviderId] = useState<SupportedWalletId | null>(() => readWalletSession()?.walletProviderId ?? null)
     const [walletBalance, setWalletBalance] = useState<string | null>(null)
     const [supportedWallets, setSupportedWallets] = useState<SupportedStellarWallet[]>([])
     const [isHydrated, setIsHydrated] = useState(false)
@@ -110,11 +110,43 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         const session = readWalletSession()
         if (session) {
-            setWalletAddress(session.walletAddress)
-            setWalletProviderId(session.walletProviderId)
+            setWalletAddress((current) => current ?? session.walletAddress)
+            setWalletProviderId((current) => current ?? session.walletProviderId)
         }
         setIsHydrated(true)
     }, [])
+
+    useEffect(() => {
+        if (typeof window === "undefined") return
+
+        const syncWalletSession = (options?: { preserveConnectedSession?: boolean }) => {
+            const session = readWalletSession()
+            if (options?.preserveConnectedSession && !session && (walletAddress || walletProviderId)) {
+                return
+            }
+            setWalletAddress(session?.walletAddress ?? null)
+            setWalletProviderId(session?.walletProviderId ?? null)
+        }
+
+        const handleStorage = (event: StorageEvent) => {
+            if (event.key && event.key !== STORAGE_KEY && !LEGACY_STORAGE_KEYS.includes(event.key)) {
+                return
+            }
+
+            syncWalletSession()
+        }
+
+        window.addEventListener("storage", handleStorage)
+        const handleFocus = () => {
+            syncWalletSession({ preserveConnectedSession: true })
+        }
+        window.addEventListener("focus", handleFocus)
+
+        return () => {
+            window.removeEventListener("storage", handleStorage)
+            window.removeEventListener("focus", handleFocus)
+        }
+    }, [walletAddress, walletProviderId])
 
     useEffect(() => {
         let cancelled = false

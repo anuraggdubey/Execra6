@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { useAgentContext, type ActivityLog } from "@/lib/AgentContext"
 import { useWalletContext } from "@/lib/WalletContext"
+import { isValidWalletAddress } from "@/lib/taskFeatures"
 import type { TaskRecord } from "@/types/tasks"
 
 type TabId = "tasks" | "events"
@@ -56,19 +57,54 @@ function explorerUrl(hash: string) {
     return `https://stellar.expert/explorer/testnet/tx/${hash}`
 }
 
+function readStoredWalletAddress() {
+    if (typeof window === "undefined") return null
+
+    try {
+        const raw = window.localStorage.getItem("execra_wallet_session_v1")
+        if (!raw) return null
+        const parsed = JSON.parse(raw) as { walletAddress?: unknown }
+        return isValidWalletAddress(parsed.walletAddress)
+            ? parsed.walletAddress.trim().toUpperCase()
+            : null
+    } catch {
+        return null
+    }
+}
+
 export default function ActivityPage() {
     const [searchTerm, setSearchTerm] = useState("")
     const [activeTab, setActiveTab] = useState<TabId>("tasks")
     const { activities } = useAgentContext()
-    const { walletAddress } = useWalletContext()
+    const { walletAddress, isHydrated } = useWalletContext()
 
     const [tasks, setTasks] = useState<TaskRecord[]>([])
     const [tasksLoading, setTasksLoading] = useState(false)
+    const [stableWalletAddress, setStableWalletAddress] = useState<string | null>(null)
+    const [tasksError, setTasksError] = useState<string | null>(null)
+
+    useEffect(() => {
+        if (isValidWalletAddress(walletAddress)) {
+            setStableWalletAddress(walletAddress.trim().toUpperCase())
+            return
+        }
+
+        if (isHydrated) {
+            setStableWalletAddress(readStoredWalletAddress())
+        }
+    }, [isHydrated, walletAddress])
+
+    const effectiveWalletAddress = walletAddress ?? stableWalletAddress
 
     // Fetch task history from Supabase when wallet connected
     useEffect(() => {
-        if (!walletAddress) {
+        if (!isHydrated) {
+            return
+        }
+
+        if (!effectiveWalletAddress) {
             setTasks([])
+            setTasksError(null)
             return
         }
 
@@ -76,14 +112,18 @@ export default function ActivityPage() {
 
         const fetchTasks = async () => {
             setTasksLoading(true)
+            setTasksError(null)
             try {
-                const response = await fetch(`/api/tasks?walletAddress=${encodeURIComponent(walletAddress)}&limit=50`)
+                const response = await fetch(`/api/tasks?walletAddress=${encodeURIComponent(effectiveWalletAddress)}&limit=50`)
                 const data = await response.json()
                 if (!response.ok) throw new Error(data.error ?? "Failed to load tasks")
                 if (!cancelled) setTasks(Array.isArray(data.tasks) ? data.tasks : [])
             } catch (error) {
                 console.error("[activity] Failed to fetch tasks", error)
-                if (!cancelled) setTasks([])
+                if (!cancelled) {
+                    setTasks([])
+                    setTasksError(error instanceof Error ? error.message : "Failed to load task history.")
+                }
             } finally {
                 if (!cancelled) setTasksLoading(false)
             }
@@ -96,7 +136,7 @@ export default function ActivityPage() {
             cancelled = true
             window.clearInterval(interval)
         }
-    }, [walletAddress])
+    }, [effectiveWalletAddress, isHydrated])
 
     // Filter tasks by search
     const filteredTasks = useMemo(() => {
@@ -165,7 +205,14 @@ export default function ActivityPage() {
             {/* Tasks Tab */}
             {activeTab === "tasks" && (
                 <div className="space-y-3">
-                    {!walletAddress && (
+                    {!isHydrated && (
+                        <div className="flex items-center justify-center gap-2 py-12 text-sm text-foreground-soft">
+                            <Loader2 size={16} className="animate-spin text-primary" />
+                            Restoring wallet session...
+                        </div>
+                    )}
+
+                    {isHydrated && !effectiveWalletAddress && (
                         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-4 text-center">
                             <AlertTriangle size={18} className="mx-auto mb-2 text-amber-500" />
                             <p className="text-sm font-medium text-foreground">Connect a wallet to view task history</p>
@@ -173,14 +220,22 @@ export default function ActivityPage() {
                         </div>
                     )}
 
-                    {walletAddress && tasksLoading && tasks.length === 0 && (
+                    {isHydrated && effectiveWalletAddress && tasksError && (
+                        <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-4 text-center">
+                            <AlertTriangle size={18} className="mx-auto mb-2 text-red-500" />
+                            <p className="text-sm font-medium text-foreground">Could not load task history</p>
+                            <p className="mt-1 text-xs text-foreground-soft">{tasksError}</p>
+                        </div>
+                    )}
+
+                    {isHydrated && effectiveWalletAddress && tasksLoading && tasks.length === 0 && (
                         <div className="flex items-center justify-center gap-2 py-12 text-sm text-foreground-soft">
                             <Loader2 size={16} className="animate-spin text-primary" />
                             Loading tasks…
                         </div>
                     )}
 
-                    {walletAddress && !tasksLoading && filteredTasks.length === 0 && (
+                    {isHydrated && effectiveWalletAddress && !tasksLoading && !tasksError && filteredTasks.length === 0 && (
                         <div className="py-12 text-center">
                             <Activity size={24} className="mx-auto mb-3 text-muted" />
                             <p className="text-sm font-medium text-foreground">No tasks found</p>
@@ -221,7 +276,6 @@ function TaskCard({ task }: { task: TaskRecord }) {
     const chainCfg = CHAIN_STATUS_LABELS[task.on_chain_status] ?? CHAIN_STATUS_LABELS.uninitialized
     const rewardXlm = task.reward_stroops ? (Number(task.reward_stroops) / 10_000_000).toFixed(7) : null
     const featureConfig = task.feature_config
-    const featureState = task.feature_state
 
     return (
         <div className="rounded-xl border border-border bg-surface p-4 transition-colors hover:bg-surface-elevated">
@@ -283,30 +337,6 @@ function TaskCard({ task }: { task: TaskRecord }) {
 
                 {featureConfig && (
                     <DetailItem label="Fee" value={featureConfig.feeMode === "sponsored" ? "Sponsored" : "User Paid"} />
-                )}
-
-                {featureConfig && (
-                    <DetailItem label="Settlement" value={featureConfig.settlementMethod.toUpperCase()} />
-                )}
-
-                {featureConfig && (
-                    <DetailItem
-                        label="Auth"
-                        value={featureConfig.authMode === "smart" ? `Smart (${featureConfig.smartWalletAddress ?? "unregistered"})` : "Wallet"}
-                    />
-                )}
-
-                {featureConfig && (
-                    <DetailItem
-                        label="Approvals"
-                        value={featureConfig.approvalMode === "multisig"
-                            ? `${featureState?.approvalCount ?? 0}/${featureConfig.requiredApprovals}`
-                            : "Single signer"}
-                    />
-                )}
-
-                {featureState?.crossBorderInstructions && (
-                    <DetailItem label="Anchor Handoff" value={featureState.crossBorderInstructions} />
                 )}
             </div>
         </div>

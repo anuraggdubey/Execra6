@@ -61,10 +61,6 @@ function symbolScVal(value: string) {
     return xdr.ScVal.scvSymbol(value)
 }
 
-function addressVecScVal(addresses: string[]) {
-    return xdr.ScVal.scvVec(addresses.map((address) => new Address(address).toScVal()))
-}
-
 function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => {
         window.setTimeout(resolve, ms)
@@ -310,12 +306,6 @@ export async function createEscrowedTask(params: SorobanTaskLifecycleParams): Pr
             new Address(params.walletAddress).toScVal(),
             symbolScVal(params.agentType),
             nativeToScVal(params.rewardStroops, { type: "i128" }),
-            symbolScVal(featureConfig.settlementMethod),
-            symbolScVal(featureConfig.approvalMode),
-            nativeToScVal(featureConfig.requiredApprovals, { type: "u32" }),
-            symbolScVal(featureConfig.authMode),
-            new Address(featureConfig.smartWalletAddress ?? params.walletAddress).toScVal(),
-            addressVecScVal(featureConfig.approvers),
         ],
         confirmationTaskId: params.onChainTaskId,
         expectedTaskStatus: "pending",
@@ -407,60 +397,6 @@ export async function cancelEscrowedTask(params: {
 }
 
 export const cancelTaskOnChain = cancelEscrowedTask
-
-export async function approveEscrowedTask(params: {
-    walletAddress: string
-    walletProviderId: string | null
-    onChainTaskId: bigint
-    featureConfig: TaskFeatureConfig
-}) {
-    requireSorobanSupport(params.walletProviderId)
-    const featureConfig = normalizeTaskFeatureConfig(params.featureConfig)
-
-    const receipt = await submitContractInvocation({
-        walletAddress: params.walletAddress,
-        walletProviderId: params.walletProviderId as SupportedWalletId | null,
-        featureConfig,
-        functionName: "approve_task",
-        args: [
-            nativeToScVal(params.onChainTaskId, { type: "u64" }),
-            new Address(params.walletAddress).toScVal(),
-        ],
-        confirmationTaskId: params.onChainTaskId,
-        expectedTaskStatus: "pending",
-    })
-
-    return {
-        txHash: receipt.txHash,
-    }
-}
-
-export async function registerSmartWalletOnChain(params: {
-    walletAddress: string
-    walletProviderId: string | null
-    smartWalletAddress: string
-    policy: string
-    featureConfig: TaskFeatureConfig
-}) {
-    requireSorobanSupport(params.walletProviderId)
-    const featureConfig = normalizeTaskFeatureConfig(params.featureConfig)
-
-    const receipt = await submitContractInvocation({
-        walletAddress: params.walletAddress,
-        walletProviderId: params.walletProviderId as SupportedWalletId | null,
-        featureConfig,
-        functionName: "set_smart_wallet",
-        args: [
-            new Address(params.walletAddress).toScVal(),
-            new Address(params.smartWalletAddress).toScVal(),
-            symbolScVal(params.policy || "delegate"),
-        ],
-    })
-
-    return {
-        txHash: receipt.txHash,
-    }
-}
 
 export async function fetchOnChainTask(params: { taskId: bigint }) {
     const server = getRpcServer()

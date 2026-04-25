@@ -23,13 +23,6 @@ pub struct Task {
     pub agent_type: Symbol,
     pub reward: i128,
     pub status: TaskStatus,
-    pub settlement_method: Symbol,
-    pub approval_mode: Symbol,
-    pub required_approvals: u32,
-    pub approval_count: u32,
-    pub auth_mode: Symbol,
-    pub smart_wallet: Address,
-    pub approvers: Vec<Address>,
 }
 
 #[contracttype]
@@ -37,10 +30,7 @@ enum DataKey {
     Admin,
     Token,
     Executors(Address),
-    SmartWallet(Address),
-    SmartWalletPolicy(Address),
     Task(u64),
-    Approval(u64, Address),
 }
 
 #[contracterror]
@@ -54,9 +44,6 @@ pub enum TaskEscrowError {
     Unauthorized = 5,
     InvalidTaskState = 6,
     ExecutorRequired = 7,
-    InvalidApprovalConfig = 8,
-    SmartWalletRequired = 9,
-    ApproverRequired = 10,
 }
 
 #[contract]
@@ -92,46 +79,20 @@ impl TaskEscrowContract {
             .unwrap_or(false)
     }
 
-    pub fn set_smart_wallet(env: Env, owner: Address, smart_wallet: Address, auth_policy: Symbol) {
-        owner.require_auth();
-
-        env.storage()
-            .persistent()
-            .set(&DataKey::SmartWallet(owner.clone()), &smart_wallet);
-        env.storage()
-            .persistent()
-            .set(&DataKey::SmartWalletPolicy(owner.clone()), &auth_policy);
-        extend_persistent(&env, &DataKey::SmartWallet(owner.clone()));
-        extend_persistent(&env, &DataKey::SmartWalletPolicy(owner));
-    }
-
-    pub fn get_smart_wallet(env: Env, owner: Address) -> Option<Address> {
-        env.storage().persistent().get(&DataKey::SmartWallet(owner))
-    }
-
     pub fn create_task(
         env: Env,
         task_id: u64,
         user: Address,
         agent_type: Symbol,
         reward: i128,
-        settlement_method: Symbol,
-        approval_mode: Symbol,
-        required_approvals: u32,
-        auth_mode: Symbol,
-        smart_wallet: Address,
-        approvers: Vec<Address>,
     ) {
         user.require_auth();
         ensure_positive_reward(&env, reward);
-        validate_approval_config(&env, &approval_mode, required_approvals, &approvers);
 
         let key = DataKey::Task(task_id);
         if env.storage().persistent().has(&key) {
             soroban_sdk::panic_with_error!(&env, TaskEscrowError::TaskAlreadyExists);
         }
-
-        let resolved_smart_wallet = resolve_smart_wallet(&env, &user, &auth_mode, smart_wallet);
 
         let task = Task {
             task_id,
@@ -139,13 +100,6 @@ impl TaskEscrowContract {
             agent_type,
             reward,
             status: TaskStatus::Pending,
-            settlement_method,
-            approval_mode,
-            required_approvals,
-            approval_count: 0,
-            auth_mode,
-            smart_wallet: resolved_smart_wallet,
-            approvers,
         };
 
         token_client(&env).transfer(&user, &env.current_contract_address(), &reward);
@@ -154,41 +108,13 @@ impl TaskEscrowContract {
         extend_instance(&env);
     }
 
-    pub fn approve_task(env: Env, task_id: u64, approver: Address) {
-        let key = DataKey::Task(task_id);
-        let mut task = read_task(&env, &key);
-        ensure_pending(&env, &task);
-        approver.require_auth();
-
-        if !is_multisig(&env, &task.approval_mode) {
-            soroban_sdk::panic_with_error!(&env, TaskEscrowError::InvalidApprovalConfig);
-        }
-
-        if !contains_approver(&task.approvers, &approver) {
-            soroban_sdk::panic_with_error!(&env, TaskEscrowError::ApproverRequired);
-        }
-
-        let approval_key = DataKey::Approval(task_id, approver.clone());
-        if env.storage().persistent().has(&approval_key) {
-            soroban_sdk::panic_with_error!(&env, TaskEscrowError::InvalidTaskState);
-        }
-
-        env.storage().persistent().set(&approval_key, &true);
-        extend_persistent(&env, &approval_key);
-
-        task.approval_count += 1;
-        env.storage().persistent().set(&key, &task);
-        extend_persistent(&env, &key);
-    }
-
     pub fn complete_task(env: Env, task_id: u64, caller: Address, pay_executor: bool) {
         let key = DataKey::Task(task_id);
         let mut task = read_task(&env, &key);
         ensure_pending(&env, &task);
         caller.require_auth();
-        ensure_approval_threshold(&env, &task);
 
-        let is_task_owner = is_authorized_task_caller(&env, &task, &caller);
+        let is_task_owner = caller == task.user;
         let is_executor = Self::is_executor(env.clone(), caller.clone());
 
         if pay_executor {
@@ -211,7 +137,7 @@ impl TaskEscrowContract {
         let key = DataKey::Task(task_id);
         let mut task = read_task(&env, &key);
         ensure_pending(&env, &task);
-        if !is_authorized_task_caller(&env, &task, &caller) {
+        if caller != task.user {
             soroban_sdk::panic_with_error!(&env, TaskEscrowError::Unauthorized);
         }
         caller.require_auth();
@@ -264,79 +190,6 @@ fn ensure_pending(env: &Env, task: &Task) {
     }
 }
 
-fn is_multisig(env: &Env, approval_mode: &Symbol) -> bool {
-    *approval_mode == Symbol::new(env, "multisig")
-}
-
-fn is_smart_auth(env: &Env, auth_mode: &Symbol) -> bool {
-    *auth_mode == Symbol::new(env, "smart")
-}
-
-fn contains_approver(approvers: &Vec<Address>, approver: &Address) -> bool {
-    let mut index = 0;
-    while index < approvers.len() {
-        if approvers.get(index).unwrap() == *approver {
-            return true;
-        }
-        index += 1;
-    }
-
-    false
-}
-
-fn validate_approval_config(env: &Env, approval_mode: &Symbol, required_approvals: u32, approvers: &Vec<Address>) {
-    if is_multisig(env, approval_mode) {
-        if approvers.len() < 2 || required_approvals < 2 || required_approvals > approvers.len() {
-            soroban_sdk::panic_with_error!(env, TaskEscrowError::InvalidApprovalConfig);
-        }
-    } else if required_approvals != 1 {
-        soroban_sdk::panic_with_error!(env, TaskEscrowError::InvalidApprovalConfig);
-    }
-}
-
-fn resolve_smart_wallet(env: &Env, user: &Address, auth_mode: &Symbol, requested: Address) -> Address {
-    if !is_smart_auth(env, auth_mode) {
-        return user.clone();
-    }
-
-    if requested != *user {
-        return requested;
-    }
-
-    let stored: Option<Address> = env.storage().persistent().get(&DataKey::SmartWallet(user.clone()));
-    if stored.is_none() {
-        soroban_sdk::panic_with_error!(env, TaskEscrowError::SmartWalletRequired);
-    }
-
-    stored.unwrap()
-}
-
-fn ensure_approval_threshold(env: &Env, task: &Task) {
-    if is_multisig(env, &task.approval_mode) && task.approval_count < task.required_approvals {
-        soroban_sdk::panic_with_error!(env, TaskEscrowError::InvalidTaskState);
-    }
-}
-
-fn is_authorized_task_caller(env: &Env, task: &Task, caller: &Address) -> bool {
-    if *caller == task.user {
-        return true;
-    }
-
-    if !is_smart_auth(env, &task.auth_mode) {
-        return false;
-    }
-
-    if *caller == task.smart_wallet {
-        return true;
-    }
-
-    if let Some(stored_wallet) = TaskEscrowContract::get_smart_wallet(env.clone(), task.user.clone()) {
-        return *caller == stored_wallet;
-    }
-
-    false
-}
-
 fn token_client(env: &Env) -> token::Client<'_> {
     let token_address: Address = env
         .storage()
@@ -361,7 +214,7 @@ fn extend_persistent(env: &Env, key: &DataKey) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::{testutils::Address as _, token, vec};
+    use soroban_sdk::{testutils::Address as _, token};
 
     fn setup() -> (Env, TaskEscrowContractClient<'static>, Address, Address, Address) {
         let env = Env::default();
@@ -393,12 +246,6 @@ mod tests {
             &user,
             &Symbol::new(&env, "email"),
             &reward,
-            &Symbol::new(&env, "wallet"),
-            &Symbol::new(&env, "single"),
-            &1u32,
-            &Symbol::new(&env, "wallet"),
-            &user,
-            &vec![&env],
         );
 
         let task = client.get_task(&1u64);
@@ -421,12 +268,6 @@ mod tests {
             &user,
             &Symbol::new(&env, "search"),
             &reward,
-            &Symbol::new(&env, "sep24"),
-            &Symbol::new(&env, "single"),
-            &1u32,
-            &Symbol::new(&env, "wallet"),
-            &user,
-            &vec![&env],
         );
 
         let task = client.get_task(&2u64);
@@ -435,18 +276,14 @@ mod tests {
         assert!(task.agent_type == Symbol::new(&env, "search"));
         assert!(task.reward == reward);
         assert!(task.status == TaskStatus::Pending);
-        assert!(task.settlement_method == Symbol::new(&env, "sep24"));
         assert!(token_client.balance(&user) == 8_000_000i128);
     }
 
     #[test]
-    fn requires_multisig_approvals_before_completion() {
+    fn completes_task_and_returns_reward() {
         let (env, client, _admin, user, sac_address) = setup();
         let token_client = token::Client::new(&env, &sac_address);
         let executor = Address::generate(&env);
-        let approver_one = Address::generate(&env);
-        let approver_two = Address::generate(&env);
-        let approvers = vec![&env, approver_one.clone(), approver_two.clone()];
         client.set_executor(&executor, &true);
 
         client.create_task(
@@ -454,46 +291,30 @@ mod tests {
             &user,
             &Symbol::new(&env, "coding"),
             &2_500_000i128,
-            &Symbol::new(&env, "wallet"),
-            &Symbol::new(&env, "multisig"),
-            &2u32,
-            &Symbol::new(&env, "wallet"),
-            &user,
-            &approvers,
         );
 
-        client.approve_task(&3u64, &approver_one);
-        client.approve_task(&3u64, &approver_two);
         client.complete_task(&3u64, &user, &false);
 
         let task = client.get_task(&3u64);
         assert!(task.status == TaskStatus::Completed);
-        assert!(task.approval_count == 2u32);
         assert!(token_client.balance(&user) == 10_000_000i128);
     }
 
     #[test]
-    fn smart_wallet_delegate_can_cancel_task() {
-        let (env, client, _admin, user, _sac_address) = setup();
-        let delegate = Address::generate(&env);
-
-        client.set_smart_wallet(&user, &delegate, &Symbol::new(&env, "delegate"));
+    fn cancels_task_and_returns_reward() {
+        let (env, client, _admin, user, sac_address) = setup();
+        let token_client = token::Client::new(&env, &sac_address);
         client.create_task(
             &4u64,
             &user,
             &Symbol::new(&env, "browser"),
             &1_000_000i128,
-            &Symbol::new(&env, "wallet"),
-            &Symbol::new(&env, "single"),
-            &1u32,
-            &Symbol::new(&env, "smart"),
-            &delegate,
-            &vec![&env],
         );
 
-        client.cancel_task(&4u64, &delegate);
+        client.cancel_task(&4u64, &user);
 
         let task = client.get_task(&4u64);
         assert!(task.status == TaskStatus::Cancelled);
+        assert!(token_client.balance(&user) == 10_000_000i128);
     }
 }

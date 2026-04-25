@@ -66,29 +66,6 @@ export async function finalizeEscrowedTask(params: {
     console.log(LOG_PREFIX, `Finalizing task: dbId=${params.taskId}, chainId=${params.onChainTaskId}`)
     const featureState = { ...params.blockchainPayload.featureState }
 
-    if (params.blockchainPayload.featureConfig.settlementMethod !== "wallet") {
-        const crossBorderResponse = await fetch("/api/cross-border/intent", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                taskId: params.taskId,
-                walletAddress: params.walletAddress,
-                onChainTaskId: params.blockchainPayload.onChainTaskId,
-                rewardStroops: params.blockchainPayload.rewardStroops,
-                featureConfig: params.blockchainPayload.featureConfig,
-            }),
-        })
-
-        const crossBorderPayload = await crossBorderResponse.json().catch(() => ({}))
-        if (!crossBorderResponse.ok) {
-            throw new Error(typeof crossBorderPayload.error === "string" ? crossBorderPayload.error : "Failed to prepare cross-border anchor intent.")
-        }
-
-        featureState.crossBorderStatus = "ready"
-        featureState.crossBorderIntentId = typeof crossBorderPayload.intentId === "string" ? crossBorderPayload.intentId : null
-        featureState.crossBorderInstructions = typeof crossBorderPayload.instructions === "string" ? crossBorderPayload.instructions : null
-    }
-
     const receipt = await completeEscrowedTask({
         walletAddress: params.walletAddress,
         walletProviderId: params.walletProviderId,
