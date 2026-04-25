@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { Activity, Settings, Sparkles } from "lucide-react"
+import { Activity, BarChart3, Settings, Sparkles } from "lucide-react"
 import TopNavbar from "@/components/layout/TopNavbar"
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -27,6 +27,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {/* Mobile bottom nav */}
             <nav className="flex h-14 shrink-0 items-center justify-around border-t border-border bg-surface safe-bottom sm:hidden">
                 <MobileNavItem href="/agents" icon={<Sparkles size={18} />} label="Workspace" active={pathname === "/agents"} />
+                <MobileNavItem href="/dashboard" icon={<BarChart3 size={18} />} label="Dashboard" active={pathname === "/dashboard"} />
                 <MobileNavItem href="/activity" icon={<Activity size={18} />} label="Activity" active={pathname === "/activity"} />
                 <MobileNavItem href="/settings" icon={<Settings size={18} />} label="Settings" active={pathname === "/settings"} />
             </nav>

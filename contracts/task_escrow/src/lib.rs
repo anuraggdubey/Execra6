@@ -1,6 +1,6 @@
 #![no_std]
 
-use soroban_sdk::{contract, contracterror, contractimpl, contracttype, token, Address, Env, Symbol, Vec};
+use soroban_sdk::{contract, contracterror, contractimpl, contracttype, token, Address, Env, Symbol};
 
 const INSTANCE_BUMP_THRESHOLD: u32 = 518_400;
 const INSTANCE_BUMP_AMOUNT: u32 = 535_680;

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Activity, Settings, Sparkles, Wallet } from "lucide-react"
+import { Activity, BarChart3, Settings, Sparkles, Wallet } from "lucide-react"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import ConnectWalletButton from "@/components/wallet/ConnectWalletButton"
 import { useWalletContext } from "@/lib/WalletContext"
@@ -22,6 +22,7 @@ export default function TopNavbar() {
 
                 <nav className="hidden items-center gap-1 sm:flex">
                     <NavLink href="/agents" label="Workspace" icon={<Sparkles size={14} />} active={pathname === "/agents"} />
+                    <NavLink href="/dashboard" label="Dashboard" icon={<BarChart3 size={14} />} active={pathname === "/dashboard"} />
                     <NavLink href="/activity" label="Activity" icon={<Activity size={14} />} active={pathname === "/activity"} />
                     <NavLink href="/settings" label="Settings" icon={<Settings size={14} />} active={pathname === "/settings"} />
                 </nav>

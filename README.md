@@ -66,7 +66,7 @@ This project is configured for `Stellar Testnet`.
 
 ### Deployed Contract
 
-- Soroban Contract ID: `CA6MESAPUDXH4AJJY45WRYWBX4EIQL7XOY3XKC3WZZXCNIDGGHSC2GKB`
+- Soroban Contract ID: `CASPLHL5TXZWA5PAFXPXN2CXVCVOGIC3ET56W44A5OJWHYZ43H2S6FK5`
 - Native XLM Stellar Asset Contract ID: `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`
 - Contract package path: [`contracts/task_escrow`](./contracts/task_escrow)
 
@@ -189,16 +189,59 @@ The Soroban escrow flow keeps one advanced extension:
 
 ### What You Need To Do
 
-1. Redeploy the updated Soroban contract from [`contracts/task_escrow`](./contracts/task_escrow).
-2. Update `.env.local` with the new deployed contract ID and add `SOROBAN_SPONSOR_SECRET`.
-3. Run `supabase/task_features_migration.sql`.
-4. Open `/settings` and save your sponsorship preference.
+1. Run `supabase/task_features_migration.sql`.
+2. Open `/settings`.
+3. Change `Fee Mode` to `Sponsored Fee Bump`.
+4. Optionally add the public sponsor wallet address for display.
+5. Press `Save`.
+6. Run any agent task from `/agents` with a connected Stellar wallet.
 
 ### Current Local Setup Status
 
 - Contract redeployed on Stellar testnet
-- `.env.local` updated with the new `NEXT_PUBLIC_SOROBAN_CONTRACT_ID`
+- `.env.local` updated with `NEXT_PUBLIC_SOROBAN_CONTRACT_ID=CASPLHL5TXZWA5PAFXPXN2CXVCVOGIC3ET56W44A5OJWHYZ43H2S6FK5`
 - `.env.local` updated with `SOROBAN_SPONSOR_SECRET` for sponsor fee bumps
+
+### Fee Sponsorship Flow
+
+1. Connect `Freighter`, `xBull`, or `Albedo`.
+2. Open [`/settings`](./app/settings/page.tsx) and save `Sponsored Fee Bump`.
+3. Start a task from [`/agents`](./app/agents/page.tsx).
+4. The app prepares the Soroban transaction client-side.
+5. If sponsorship is enabled, the signed XDR is posted to `/api/soroban/sponsor`.
+6. The sponsor account wraps the transaction in a fee bump and submits it to Stellar testnet.
+7. Task history in `/activity` and `/dashboard` shows whether the saved task config used sponsored fees.
+
+## Submission Proof
+
+### Metrics Dashboard
+
+- Link: `/dashboard`
+- Screenshot: `./Screenshot/metricsdash.png`
+
+### Monitoring Dashboard
+
+- Link: `/api/platform-status`
+- Screenshot: `./Screenshot/monitordash.png`
+
+### Security Checklist
+
+- Link: [`docs/security-checklist.md`](./docs/security-checklist.md)
+
+### Community Contribution
+
+- Link placeholder: `https://twitter.com/your-handle/status/your-post-id`
+
+### Advanced Feature
+
+- Feature: `Fee Sponsorship`
+- Description: user-signed Soroban transactions can be relayed through `/api/soroban/sponsor`, where the configured sponsor account pays the fee bump.
+- Proof of implementation:
+  - UI configuration: [`app/settings/page.tsx`](./app/settings/page.tsx)
+  - Feature state normalization: [`lib/taskFeatures.ts`](./lib/taskFeatures.ts)
+  - Sponsorship submit route: [`app/api/soroban/sponsor/route.ts`](./app/api/soroban/sponsor/route.ts)
+  - On-chain task flow: [`lib/soroban/taskEscrowClient.ts`](./lib/soroban/taskEscrowClient.ts)
+  - Monitoring view: [`app/dashboard/page.tsx`](./app/dashboard/page.tsx)
 
 ## Architecture
 
@@ -363,89 +406,6 @@ Execra6/
 ├─ tsconfig.json
 └─ README.md
 ```
-
-## Folder And File Responsibilities
-
-### `app/`
-
-This contains the App Router pages, layouts, and API routes.
-
-- `app/page.tsx`: landing page
-- `app/agents/page.tsx`: main multi-agent workspace
-- `app/activity/page.tsx`: task history and activity feed
-- `app/settings/page.tsx`: wallet and account settings
-- `app/api/*`: server routes for agents, GitHub auth, task persistence, downloads, previews, and utility endpoints
-
-### `components/`
-
-Reusable UI components for each agent and shared layout.
-
-- `components/agents/*`: frontend panels for browser, email, GitHub, and web search agents
-- `components/layout/*`: app shell and navigation
-- `components/wallet/*`: wallet connect UI
-
-### `lib/agents/`
-
-Core orchestration for each agent.
-
-- `githubAgentService.ts`: repo analysis and GitHub workflows
-- `codingAgentService.ts`: generated project output and preview handling
-- `documentAgentService.ts`: document parsing and analysis
-- `emailAgentService.ts`: email drafting
-- `webSearchAgentService.ts`: search and summarization
-- `browserAgentService.ts`: browser task planning and structured output formatting
-
-### `lib/services/`
-
-Shared backend services used by routes and agents.
-
-- `automationPlanner.ts`: turns browser instructions into safe browser steps
-- `browserService.ts`: Playwright execution for browser automation
-- `browserSessionStore.ts`: browser session state and live event streaming
-- `taskService.ts`: task CRUD and lifecycle persistence
-- `userService.ts`: wallet-user persistence
-- `searchService.ts` and `videoService.ts`: search and video lookup helpers
-- `validation.ts`: shared input validation
-
-### `lib/soroban/`
-
-Soroban and Stellar integration layer.
-
-- escrow verification
-- contract client setup
-- task lifecycle helpers
-- wallet signing support
-
-### `lib/wallet/`
-
-Wallet integration and session helpers for supported Stellar wallets.
-
-### `contracts/task_escrow/`
-
-Rust smart contract source for the Soroban escrow flow.
-
-### `supabase/`
-
-Database schema, migrations, and setup docs.
-
-### `projects/`
-
-Generated local project outputs from the coding agent. These can be imported into Supabase with `npm run import:legacy-projects`.
-
-### Root Files
-
-- `package.json`: scripts and dependencies
-- `server.mjs`: custom Next.js server entrypoint
-- `next.config.ts`: Next.js config
-- `tsconfig.json`: TypeScript config
-- `eslint.config.mjs`: lint config
-
-## Notes
-
-- This repo currently targets `Stellar Testnet`, not mainnet.
-- Do not commit real secrets into `.env.local`.
-- The Soroban escrow flow depends on a supported wallet being connected when both create and complete signatures are requested.
-- The `public/browser-agent/` directory may contain old screenshots from previous browser-agent runs even though screenshots are no longer part of the normal output flow.
 
 ## License
 
