@@ -216,13 +216,13 @@ The Soroban escrow flow keeps one advanced extension:
 
 ### Metrics Dashboard
 
-- Link: `/dashboard`
-- Screenshot: `./Screenshot/metricsdash.png`
+- [Link dashboard](https://execra6-ai.vercel.app/dashboard)
+- Screenshot: (./Screenshot/metricsdash.png)
 
 ### Monitoring Dashboard
 
-- Link: `/api/platform-status`
-- Screenshot: `./Screenshot/monitordash.png`
+- [Link Monitor](https://execra6-ai.vercel.app/api/platform-status)
+- Screenshot: (./Screenshot/monitordash.png)
 
 ### Security Checklist
 
