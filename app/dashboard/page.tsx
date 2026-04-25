@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Activity, CheckCircle2, Coins, Loader2, ShieldCheck, Sparkles, Wallet } from "lucide-react"
+import { Activity, CheckCircle2, Coins, Loader2, ShieldCheck, Sparkles, Users, Wallet } from "lucide-react"
 import { useAgentContext } from "@/lib/AgentContext"
 import { useWalletContext } from "@/lib/WalletContext"
 import type { TaskRecord } from "@/types/tasks"
@@ -29,6 +29,7 @@ export default function DashboardPage() {
     const [platformStatus, setPlatformStatus] = useState<PlatformStatus | null>(null)
     const [recentTasks, setRecentTasks] = useState<TaskRecord[]>([])
     const [walletTasks, setWalletTasks] = useState<TaskRecord[]>([])
+    const [userCount, setUserCount] = useState(0)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -39,13 +40,15 @@ export default function DashboardPage() {
             try {
                 const platformPromise = fetch("/api/platform-status", { cache: "no-store" }).then((response) => response.json())
                 const recentTasksPromise = fetch("/api/tasks?limit=8", { cache: "no-store" }).then((response) => response.json())
+                const userCountPromise = fetch("/api/users", { cache: "no-store" }).then((response) => response.json())
                 const walletTasksPromise = walletAddress
                     ? fetch(`/api/tasks?walletAddress=${encodeURIComponent(walletAddress)}&limit=8`, { cache: "no-store" }).then((response) => response.json())
                     : Promise.resolve({ tasks: [] })
 
-                const [platformPayload, recentPayload, walletPayload] = await Promise.all([
+                const [platformPayload, recentPayload, userPayload, walletPayload] = await Promise.all([
                     platformPromise,
                     recentTasksPromise,
+                    userCountPromise,
                     walletTasksPromise,
                 ])
 
@@ -53,12 +56,14 @@ export default function DashboardPage() {
 
                 setPlatformStatus(platformPayload)
                 setRecentTasks(Array.isArray(recentPayload.tasks) ? recentPayload.tasks : [])
+                setUserCount(typeof userPayload.count === "number" ? userPayload.count : 0)
                 setWalletTasks(Array.isArray(walletPayload.tasks) ? walletPayload.tasks : [])
             } catch (error) {
                 console.error("[dashboard] Failed to load metrics", error)
                 if (!cancelled) {
                     setPlatformStatus(null)
                     setRecentTasks([])
+                    setUserCount(0)
                     setWalletTasks([])
                 }
             } finally {
@@ -103,12 +108,18 @@ export default function DashboardPage() {
                 </div>
             </section>
 
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <MetricCard
                     icon={<Sparkles size={16} />}
                     label="Agents Configured"
                     value={agents.length.toString()}
                     tone="text-primary"
+                />
+                <MetricCard
+                    icon={<Users size={16} />}
+                    label="Total Users"
+                    value={userCount.toString()}
+                    tone="text-violet-500"
                 />
                 <MetricCard
                     icon={<CheckCircle2 size={16} />}
@@ -182,7 +193,8 @@ export default function DashboardPage() {
                             <Wallet size={15} className="text-primary" />
                             Wallet-specific usage
                         </div>
-                        <div className="mt-2">Sponsored tasks for this wallet: {walletAddress ? sponsoredWalletTasks : 0}</div>
+                        <div className="mt-2">Total users / wallets connected: {userCount}</div>
+                        <div className="mt-1">Sponsored tasks for this wallet: {walletAddress ? sponsoredWalletTasks : 0}</div>
                         <div className="mt-1">Recent wallet tasks loaded: {walletAddress ? walletTasks.length : 0}</div>
                     </div>
                 </div>

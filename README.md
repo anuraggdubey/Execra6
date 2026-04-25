@@ -69,6 +69,7 @@ Check any address on Stellar Explorer:
 - Screenshot:
 
 ![Monitoring Dashboard](./Screenshots/monitordash.png)
+![Agents Visible](./Screenshots/agents.png.png)
 
 ### Security Checklist
 

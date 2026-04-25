@@ -101,3 +101,22 @@ export async function setGitHubConnected(walletAddressInput: unknown, githubConn
 
     return data
 }
+
+export async function getUserCount() {
+    const supabase = getSupabaseServerClient()
+
+    const { count, error } = await supabase
+        .from("users")
+        .select("*", { count: "exact", head: true })
+
+    if (error) {
+        if (isMissingUsersTableError(error)) {
+            warnAboutMissingUsersTable()
+            return 0
+        }
+
+        throw new AgentExecutionError("DB_USER_COUNT_FAILED", normalizeError(error, "Failed to fetch user count."), 500)
+    }
+
+    return count ?? 0
+}

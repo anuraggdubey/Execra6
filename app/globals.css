@@ -66,10 +66,17 @@
 
   html {
     color-scheme: light;
+    font-size: 15px;
   }
 
   html.dark {
     color-scheme: dark;
+  }
+
+  @media (max-width: 767px) {
+    html {
+      font-size: 14px;
+    }
   }
 
   body {
