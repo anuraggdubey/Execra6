@@ -230,7 +230,7 @@ function MetricCard({
 function StatusCard({ label, value, status }: { label: string; value: string; status: string }) {
     return (
         <div className="rounded-xl border border-border bg-background p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">{label}</div>
+            <div className="text-xs font-semibold uppercase tracking-widest text-muted">{label}</div>
             <div className="mt-2 text-sm font-semibold text-foreground">{value}</div>
             <div className="mt-1 text-xs text-foreground-soft">{status}</div>
         </div>

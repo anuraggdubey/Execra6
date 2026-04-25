@@ -1,98 +1,97 @@
 # Execra
 
-Execra is a wallet-first multi-agent workspace built on Stellar/Soroban. Users connect a Stellar wallet, run AI agent workflows, and track escrow-backed task execution on-chain. The advanced feature kept in this version is `Fee Sponsorship`, where user-signed Soroban transactions are relayed through a sponsor-paid fee bump flow.
+> A wallet-first multi-agent workspace built on Stellar and Soroban.
+
+Execra lets users connect a Stellar wallet, run focused AI agent workflows, and track escrow-backed task execution on-chain.  
+The featured advanced capability in this version is **Fee Sponsorship**, where user-signed Soroban transactions are relayed through a sponsor-paid fee bump flow.
 
 ## Live Demo
 
-- https://execra6-ai.vercel.app
+[Open Execra](https://execra6-ai.vercel.app)
 
-## Project Stack
+## At a Glance
 
-- Next.js 16
-- React 19
-- TypeScript
-- Supabase
-- Soroban / Stellar SDK
-- OpenRouter / OpenAI-compatible models
-- Playwright
-- Rust for the Soroban contract
+| Area | Details |
+| --- | --- |
+| Frontend | Next.js 16, React 19, TypeScript |
+| Backend | Supabase, Next.js API routes |
+| Blockchain | Soroban / Stellar SDK |
+| AI | OpenRouter / OpenAI-compatible models |
+| Automation | Playwright |
+| Contract | Rust |
 
 ## Basic CI
 
-GitHub Actions runs a basic CI workflow on pull requests and pushes to `main` / `master`.
+GitHub Actions runs CI on pull requests and pushes to `main` / `master`.
 
-It currently checks:
+Current checks:
 
 - `npm ci`
 - `npm run lint`
 - `npm run build`
-- `cargo test` for `contracts/task_escrow`
+- `cargo test` in `contracts/task_escrow`
 
 ## Technical Documentation
 
-- Frontend app routes live in `app/`
-- reusable UI components live in `components/`
-- shared logic and Soroban integration live in `lib/`
-- smart contract source lives in `contracts/task_escrow/`
-- database schema and migrations live in `supabase/`
+- `app/`: frontend pages and API routes
+- `components/`: reusable UI
+- `lib/`: shared logic, services, wallet flow, Soroban integration
+- `contracts/task_escrow/`: Soroban smart contract
+- `supabase/`: schema and migrations
 
 ## User Guide
 
 1. Open the live app and connect a Stellar wallet.
-2. Go to `/settings` and enable `Sponsored Fee Bump` if you want fee sponsorship.
-3. Open `/agents` and run an agent task.
-4. Track task results in `/activity`.
-5. Review overall status and proof screens in `/dashboard`.
+2. Go to `/settings` and enable `Sponsored Fee Bump` if you want sponsored fees.
+3. Open `/agents` and run a task.
+4. Review execution history in `/activity`.
+5. Use `/dashboard` for metrics and monitoring proof.
 
 ## User Feedback
 
-We collected feedback from 30+ testnet users.
+Execra has been tested with **30+ testnet users**.
 
-- [View Feedback Sheet](https://docs.google.com/spreadsheets/d/1m6TaHdlt-Aq-8KD_0iVJUwQH0wSc6tWdmSN2C3pYl3Q/edit?usp=sharing)
-
-Check any address on Stellar Explorer:
-
-- https://stellar.expert/explorer/testnet
+- [Feedback Sheet](https://docs.google.com/spreadsheets/d/1m6TaHdlt-Aq-8KD_0iVJUwQH0wSc6tWdmSN2C3pYl3Q/edit?usp=sharing)
+- [Stellar Explorer](https://stellar.expert/explorer/testnet)
 
 ## Submission Proof
 
 ### Metrics Dashboard
 
-- Link: [Metrics Dashboard](https://execra6-ai.vercel.app/dashboard)
-- Screenshot:
+- [Live Metrics Dashboard](https://execra6-ai.vercel.app/dashboard)
 
 ![Metrics Dashboard](./Screenshots/metricsdash.png)
 
 ### Monitoring Dashboard
 
-- Link: [Monitoring Dashboard](https://execra6-ai.vercel.app/api/platform-status)
-- Screenshot:
+- [Live Monitoring View](https://execra6-ai.vercel.app/api/platform-status)
 
 ![Monitoring Dashboard](./Screenshots/monitordash.png)
-![Agents Visible](./Screenshots/agents.png.png)
+![Agents Visible](./Screenshots/agents.png)
 
 ### Security Checklist
 
-- [Completed security checklist](./docs/security-checklist.md)
+- [Completed Security Checklist](./docs/security-checklist.md)
 
 ### Community Contribution
 
-- Twitter post link to add later: `https://twitter.com/your-handle/status/your-post-id`
+- Twitter post link: `https://twitter.com/your-handle/status/your-post-id`
 
 ## Advanced Feature
 
 ### Fee Sponsorship
 
-Description:
-User-signed Soroban task transactions can be routed through `/api/soroban/sponsor`, where the configured sponsor account wraps the signed transaction in a fee bump and submits it to Stellar testnet.
+**Description**
 
-Proof of implementation:
+User-signed Soroban task transactions are sent through `/api/soroban/sponsor`, where the configured sponsor account wraps the signed transaction in a fee bump and submits it to Stellar testnet.
 
-- UI config: [`app/settings/page.tsx`](./app/settings/page.tsx)
+**Proof of Implementation**
+
+- UI configuration: [`app/settings/page.tsx`](./app/settings/page.tsx)
 - Feature normalization: [`lib/taskFeatures.ts`](./lib/taskFeatures.ts)
 - Sponsor route: [`app/api/soroban/sponsor/route.ts`](./app/api/soroban/sponsor/route.ts)
 - Soroban client flow: [`lib/soroban/taskEscrowClient.ts`](./lib/soroban/taskEscrowClient.ts)
-- Metrics proof page: [`app/dashboard/page.tsx`](./app/dashboard/page.tsx)
+- Metrics page: [`app/dashboard/page.tsx`](./app/dashboard/page.tsx)
 
 ## Project Structure
 
@@ -111,7 +110,7 @@ Execra6/
 │  └─ task_escrow/
 ├─ docs/
 ├─ lib/
-├─ Screenshot/
+├─ Screenshots/
 ├─ supabase/
 ├─ types/
 ├─ package.json
