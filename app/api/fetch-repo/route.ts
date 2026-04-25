@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     try {
         const body = await req.json()
         const { owner, repo, ref, walletAddress, blockchain } = body
-        const accessToken = readGitHubAccessToken(req)
+        const accessToken = readGitHubAccessToken(req, { allowServerFallback: true })
 
         if (!owner || !repo) {
             return NextResponse.json({ error: "owner and repo are required" }, { status: 400 })
