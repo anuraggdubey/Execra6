@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "node server.mjs",
     "lint": "eslint",
+    "postinstall": "node scripts/installPlaywrightBrowsers.mjs",
     "import:legacy-projects": "node scripts/importLegacyProjects.mjs"
   },
   "dependencies": {

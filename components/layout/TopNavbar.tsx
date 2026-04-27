@@ -1,8 +1,9 @@
 "use client"
 
-import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Activity, BarChart3, Settings, Sparkles, Wallet } from "lucide-react"
+import Link from "next/link"
+import BrandLogo from "@/components/layout/BrandLogo"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import ConnectWalletButton from "@/components/wallet/ConnectWalletButton"
 import { useWalletContext } from "@/lib/WalletContext"
@@ -14,11 +15,9 @@ export default function TopNavbar() {
     const pathname = usePathname()
 
     return (
-        <header className="flex h-11 shrink-0 items-center justify-between border-b border-border bg-surface/85 px-3 backdrop-blur-md sm:h-14 sm:px-6">
-            <div className="flex items-center gap-3 sm:gap-5">
-                <Link href="/agents" className="text-[13px] font-bold tracking-tight text-foreground sm:text-sm">
-                    Execra
-                </Link>
+        <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-border bg-surface/85 px-3 backdrop-blur-md sm:h-[64px] sm:px-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+                <BrandLogo href="/agents" className="py-1" imageClassName="max-h-[2.75rem] w-auto sm:max-h-[2.95rem]" priority />
 
                 <nav className="hidden items-center gap-1 sm:flex">
                     <NavLink href="/agents" label="Workspace" icon={<Sparkles size={14} />} active={pathname === "/agents"} />

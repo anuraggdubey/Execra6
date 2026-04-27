@@ -19,6 +19,11 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: "Execra",
   description: "Execra is a calmer control surface for tool-driven work.",
+  icons: {
+    icon: "/execra-logo.png",
+    shortcut: "/execra-logo.png",
+    apple: "/execra-logo.png",
+  },
 }
 
 export default function RootLayout({
@@ -29,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${manrope.variable} min-h-screen bg-background text-foreground antialiased`} suppressHydrationWarning>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
           <WalletProvider>
             <AgentProvider>
               <AppShell>{children}</AppShell>

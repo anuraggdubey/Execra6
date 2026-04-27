@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { ArrowRight, Braces, FileText, Github, Globe2, Mail, MonitorPlay } from "lucide-react"
+import BrandLogo from "@/components/layout/BrandLogo"
 import ConnectWalletButton from "@/components/wallet/ConnectWalletButton"
 import { useWalletContext } from "@/lib/WalletContext"
 import { useHasMounted } from "@/lib/useHasMounted"
@@ -21,10 +22,8 @@ export default function Home() {
 
     return (
         <div className="flex min-h-screen min-h-dvh flex-col">
-            <header className="flex items-center justify-between px-5 py-4 sm:px-8">
-                <Link href="/" className="text-sm font-semibold tracking-tight text-foreground">
-                    Execra
-                </Link>
+            <header className="flex min-h-[62px] items-center justify-between px-5 py-4 sm:min-h-[66px] sm:px-8">
+                <BrandLogo imageClassName="max-h-[2.7rem] w-auto sm:max-h-[2.95rem]" priority />
                 <div className="flex items-center gap-2">
                     {!mounted ? (
                         <div className="h-9 w-20" />

@@ -8,6 +8,13 @@ const RUN_TIMEOUT_MS = 120_000
 const POST_ACTION_WAIT_MS = 1200
 const VISIBLE_COMPLETION_DELAY_MS = 2500
 
+function resolveHeadlessMode() {
+    const configured = process.env.PLAYWRIGHT_HEADLESS?.trim().toLowerCase()
+    if (configured === "false") return false
+    if (configured === "true") return true
+    return process.env.NODE_ENV === "production"
+}
+
 function isPrivateOrRestrictedHost(hostname: string) {
     const normalized = hostname.toLowerCase()
     return (
@@ -155,7 +162,7 @@ export async function executeBrowserPlan(params: {
     onLog: (message: string, level?: "info" | "success" | "error") => void
 }) {
     const browser = await chromium.launch({
-        headless: false,
+        headless: resolveHeadlessMode(),
         slowMo: 150,
     })
 
@@ -267,7 +274,10 @@ export async function executeBrowserPlan(params: {
             finalUrl: page.url(),
         }
     } catch (error) {
-        const message = error instanceof Error ? error.message : "Browser automation failed"
+        const rawMessage = error instanceof Error ? error.message : "Browser automation failed"
+        const message = /Executable doesn't exist/i.test(rawMessage)
+            ? "Chromium is not installed in the deployment runtime. Ensure Playwright browsers are installed during build."
+            : rawMessage
         const failedStep = params.steps[executedSteps.length]
         if (failedStep) {
             executedSteps.push({
