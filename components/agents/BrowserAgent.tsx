@@ -174,6 +174,9 @@ export default function BrowserAgent() {
                                 placeholder="Open https://example.com, find pricing, and tell me the main plans."
                                 className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
                             />
+                            <p className="mt-2 text-sm font-semibold text-foreground">
+                                Warning: install Playwright Chromium first by running `npx playwright install chromium` on your system before using the browser tool.
+                            </p>
                         </div>
 
                         <div>
