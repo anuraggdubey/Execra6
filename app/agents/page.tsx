@@ -22,12 +22,17 @@ import {
 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import type { Components } from "react-markdown"
-import WorkspaceOnboarding from "@/components/WorkspaceOnboarding"
+
+import ActionButton from "@/components/workspace/ActionButton"
+import AgentQuickStart from "@/components/workspace/AgentQuickStart"
+import AgentSidebar from "@/components/workspace/AgentSidebar"
+import PromptBox from "@/components/workspace/PromptBox"
+import StepCard from "@/components/workspace/StepCard"
 import { useAgentContext } from "@/lib/AgentContext"
 import ConnectWalletButton from "@/components/wallet/ConnectWalletButton"
 import { useWalletContext } from "@/lib/WalletContext"
 import { finalizeEscrowedTask, prepareEscrowedTask, rollbackEscrowedTask } from "@/lib/soroban/taskLifecycle"
-import { getGitHubSession } from "@/lib/wallet/githubSession"
+
 
 const GitHubAgent = dynamic(() => import("@/components/agents/GitHubAgent"), {
     ssr: false,
@@ -201,14 +206,14 @@ export default function AgentsPage() {
     const [documentError, setDocumentError] = useState<string | null>(null)
     const [documentRewardXlm, setDocumentRewardXlm] = useState("0.1500000")
     const [documentTxState, setDocumentTxState] = useState<string | null>(null)
+
     const codingLocked = codingState === "running"
     const documentLocked = documentState === "running"
     const selectedAgent = useMemo(
         () => AGENTS.find((agent) => agent.id === selectedAgentId) ?? AGENTS[0],
         [selectedAgentId]
     )
-    const hasGitHubConnection = Boolean(getGitHubSession(walletAddress)?.accessToken)
-    const hasCompletedTask = agents.some((agent) => agent.tasksCompleted > 0)
+
 
     const runCodingAgent = async () => {
         if (!walletAddress || !codingPrompt.trim() || codingState === "running") return
@@ -228,7 +233,7 @@ export default function AgentsPage() {
                 agentType: "coding",
             })
 
-            setCodingTxState(`Escrow created (TX: ${preparedTask.blockchainPayload.createTxHash.slice(0, 8)}…). Running agent…`)
+            setCodingTxState(`Escrow created (TX: ${preparedTask.blockchainPayload.createTxHash.slice(0, 8)}...). Running agent...`)
             const response = await fetch("/api/run-coding-agent", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -261,7 +266,7 @@ export default function AgentsPage() {
                 throw new Error("Coding agent returned an incomplete payload.")
             }
 
-            setCodingTxState("Finalizing escrow — confirming on-chain…")
+            setCodingTxState("Finalizing escrow and confirming on-chain...")
             setCodingState("done")
             completeAgentRun("coding", `Prepared ${data.projectId} for handoff and follow-on integration.`)
 
@@ -273,7 +278,7 @@ export default function AgentsPage() {
                 blockchainPayload: preparedTask.blockchainPayload,
             })
 
-            setCodingTxState(`On-chain confirmed ✓ (TX: ${finalizeResult.txHash.slice(0, 8)}…)`)
+            setCodingTxState(`On-chain confirmed (TX: ${finalizeResult.txHash.slice(0, 8)}...)`)
         } catch (error: unknown) {
             const message = getErrorMessage(error, "Coding agent failed")
             setCodingError(message)
@@ -309,7 +314,7 @@ export default function AgentsPage() {
                 rewardXlm: documentRewardXlm,
                 agentType: "document",
             })
-            setDocumentTxState(`Escrow created (TX: ${preparedTask.blockchainPayload.createTxHash.slice(0, 8)}…). Analyzing…`)
+            setDocumentTxState(`Escrow created (TX: ${preparedTask.blockchainPayload.createTxHash.slice(0, 8)}...). Analyzing...`)
             const formData = new FormData()
             formData.append("file", documentFile)
             formData.append("question", documentQuestion)
@@ -340,7 +345,7 @@ export default function AgentsPage() {
                 throw new Error("Document analysis returned without a task ID.")
             }
             const documentTaskId = data.taskId
-            setDocumentTxState("Finalizing escrow — confirming on-chain…")
+            setDocumentTxState("Finalizing escrow and confirming on-chain...")
             setDocumentState("done")
             completeAgentRun("document", `Analyzed ${data.fileName} and prepared a concise brief.`)
 
@@ -352,7 +357,7 @@ export default function AgentsPage() {
                 blockchainPayload: preparedTask.blockchainPayload,
             })
 
-            setDocumentTxState(`On-chain confirmed ✓ (TX: ${finalizeResult.txHash.slice(0, 8)}…)`)
+            setDocumentTxState(`On-chain confirmed (TX: ${finalizeResult.txHash.slice(0, 8)}...)`)
         } catch (error: unknown) {
             const message = getErrorMessage(error, "Document analysis failed")
             setDocumentError(message)
@@ -372,176 +377,143 @@ export default function AgentsPage() {
     }
 
     return (
-        <div className="mx-auto w-full max-w-[1480px] overflow-x-hidden px-3 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
-            {/* ── Hero ── */}
-            <section className="panel mb-4 rounded-xl px-4 py-4 sm:mb-6 sm:rounded-2xl sm:px-7 sm:py-6">
-                <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
-                    <div>
-                        <div className="eyebrow">Web3 MVP workspace</div>
-                        <h1 className="mt-1.5 font-heading text-xl font-semibold tracking-[-0.03em] text-foreground sm:mt-2 sm:text-3xl">
-                            Six agents, one surface.
-                        </h1>
-                        <p className="page-copy mt-2 hidden sm:block">
-                            Focused on GitHub, Coding, and Document agents — your Stellar wallet is the primary identity
-                            for every workflow.
-                        </p>
-                    </div>
-                    <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 sm:mx-0 sm:flex-wrap sm:gap-3 sm:overflow-visible sm:pb-0">
-                        <div className="flex min-w-[100px] flex-shrink-0 flex-col gap-0.5 rounded-lg border border-border border-l-[3px] border-l-primary bg-surface-elevated px-3 py-2 sm:min-w-[130px] sm:gap-1 sm:rounded-xl sm:px-4 sm:py-3">
-                            <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-muted sm:text-[10px]">Agents</div>
-                            <div className="text-sm font-semibold tracking-tight text-foreground sm:text-base">{AGENTS.length}</div>
-                        </div>
-                        <div className="flex min-w-[100px] flex-shrink-0 flex-col gap-0.5 rounded-lg border border-border border-l-[3px] border-l-primary bg-surface-elevated px-3 py-2 sm:min-w-[130px] sm:gap-1 sm:rounded-xl sm:px-4 sm:py-3">
-                            <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-muted sm:text-[10px]">Wallet</div>
-                            <div className="text-sm font-semibold tracking-tight text-foreground sm:text-base">{walletAddress ? shortWalletAddress ?? "Connected" : "—"}</div>
-                        </div>
-                        <div className="flex min-w-[100px] flex-shrink-0 flex-col gap-0.5 rounded-lg border border-border border-l-[3px] border-l-primary bg-surface-elevated px-3 py-2 sm:min-w-[130px] sm:gap-1 sm:rounded-xl sm:px-4 sm:py-3">
-                            <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-muted sm:text-[10px]">Balance</div>
-                            <div className="text-sm font-semibold tracking-tight text-foreground sm:text-base">{walletAddress ? `${walletBalance ?? "0"} XLM` : "Testnet"}</div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <WorkspaceOnboarding
-                walletConnected={Boolean(walletAddress)}
-                hasGitHubConnection={hasGitHubConnection}
-                selectedAgentId={selectedAgentId}
-                hasCompletedTask={hasCompletedTask}
-            />
-
-            {/* ── Wallet Gate ── */}
+        <div className="mx-auto w-full max-w-[1400px] overflow-x-hidden px-3 py-3 sm:px-5 sm:py-4 lg:px-6">
             {!walletAddress && (
-                <section className="mb-4 flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:rounded-2xl sm:px-5 sm:py-5">
-                    <div>
-                        <div className="text-[13px] font-semibold text-foreground sm:text-sm">Connect a Stellar wallet to unlock the agents</div>
-                        <p className="mt-0.5 text-xs text-foreground-soft sm:mt-1 sm:text-sm">
-                            GitHub, Coding, Document, Email, Web Search, and Browser actions stay gated until a testnet wallet is connected.
-                        </p>
-                    </div>
-                    <ConnectWalletButton className="button-primary w-full sm:w-auto" />
+                <section className="mb-3 flex items-center justify-between gap-3 rounded-xl bg-surface/80 px-4 py-3 ring-1 ring-black/5 sm:mb-4">
+                    <span className="text-[13px] text-foreground-soft">Connect a Stellar wallet to unlock agents</span>
+                    <ConnectWalletButton className="button-primary !min-h-[32px] !px-3 !py-1 !text-xs" />
                 </section>
             )}
 
-            {/* ── Main Layout ── */}
-            <section id="agent-workbench" className="grid gap-4 sm:gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-                {/* Mobile: horizontal pill selector | Desktop: sidebar cards */}
-                <aside className="panel overflow-hidden p-2 sm:sticky sm:top-0 sm:self-start sm:p-4">
-                    <div className="eyebrow hidden px-2 pb-2 sm:block">Active stack</div>
+            <section id="agent-workbench" className="grid gap-3 sm:gap-4 xl:grid-cols-[220px_minmax(0,1fr)]">
+                <AgentSidebar
+                    agents={AGENTS}
+                    selectedAgentId={selectedAgentId}
+                    onSelect={(agentId) => setSelectedAgentId(agentId as WorkspaceAgentId)}
+                />
 
-                    {/* Mobile: horizontal scrollable agent pills */}
-                    <div className="flex gap-1.5 overflow-x-auto sm:hidden">
-                        {AGENTS.map((agent) => {
-                            const Icon = agent.icon
-                            const active = agent.id === selectedAgentId
-                            return (
-                                <button
-                                    key={agent.id}
-                                    onClick={() => setSelectedAgentId(agent.id)}
-                                    className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-semibold transition-colors ${
-                                        active
-                                            ? "bg-primary text-white"
-                                            : "bg-surface-elevated text-foreground-soft"
-                                    }`}
-                                >
-                                    <Icon size={14} />
-                                    {agent.label}
-                                </button>
-                            )
-                        })}
-                    </div>
-
-                    {/* Desktop: full sidebar cards */}
-                    <div className="mt-1 hidden space-y-1 sm:block">
-                        {AGENTS.map((agent) => {
-                            const Icon = agent.icon
-                            const active = agent.id === selectedAgentId
-                            return (
-                                <button
-                                    key={agent.id}
-                                    onClick={() => setSelectedAgentId(agent.id)}
-                                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 ${
-                                        active
-                                            ? "border-l-[3px] border-l-primary bg-primary-soft"
-                                            : "border-l-[3px] border-l-transparent hover:bg-surface-elevated"
-                                    }`}
-                                >
-                                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                                        active ? "bg-[color:var(--primary)] text-white" : "bg-surface-elevated text-primary"
-                                    }`}>
-                                        <Icon size={15} />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <div className="text-[13px] font-semibold text-foreground">{agent.label}</div>
-                                        <div className="text-[11px] font-medium text-primary">{agent.badge}</div>
-                                    </div>
-                                </button>
-                            )
-                        })}
-                    </div>
-                </aside>
-
-                <div className="min-w-0 space-y-4 sm:space-y-5">
-
+                <div className="min-w-0 space-y-3 sm:space-y-4">
                     {selectedAgent.id === "github" && (
-                        <div id="github-setup">
+                        <div id="github-setup" className="space-y-3">
+                            <AgentQuickStart
+                                description="Connect GitHub, select a repository, then ask for a focused review or architecture summary."
+                                steps={[
+                                    { label: "Connect a Stellar wallet", complete: Boolean(walletAddress) },
+                                    { label: "Link GitHub for repository work", complete: Boolean(walletAddress) },
+                                    { label: "Run your first task", complete: agents.some((a) => a.id === "github" && a.tasksCompleted > 0) },
+                                ]}
+                                ctaLabel="Link GitHub"
+                                ctaAction="#github-setup"
+                                secondaryLabel="Open workspace"
+                                secondaryAction="#agent-workbench"
+                            />
                             <GitHubAgent />
                         </div>
                     )}
 
                     {selectedAgent.id === "email" && (
-                        <div id="email-setup">
+                        <div id="email-setup" className="space-y-3">
+                            <AgentQuickStart
+                                description="Connect wallet, compose your email, and send via escrow-backed delivery."
+                                steps={[
+                                    { label: "Connect a Stellar wallet", complete: Boolean(walletAddress) },
+                                    { label: "Compose email content", complete: false },
+                                    { label: "Send with escrow", complete: agents.some((a) => a.id === "email" && a.tasksCompleted > 0) },
+                                ]}
+                                ctaLabel="Compose email"
+                                ctaAction="#email-setup"
+                                secondaryLabel="Open workspace"
+                                secondaryAction="#agent-workbench"
+                            />
                             <EmailAgent />
                         </div>
                     )}
 
                     {selectedAgent.id === "search" && (
-                        <div id="search-setup">
+                        <div id="search-setup" className="space-y-3">
+                            <AgentQuickStart
+                                description="Enter a search query, review source-backed results, and explore related content."
+                                steps={[
+                                    { label: "Connect a Stellar wallet", complete: Boolean(walletAddress) },
+                                    { label: "Enter a search query", complete: false },
+                                    { label: "Run your first search", complete: agents.some((a) => a.id === "search" && a.tasksCompleted > 0) },
+                                ]}
+                                ctaLabel="Start searching"
+                                ctaAction="#search-setup"
+                                secondaryLabel="Open workspace"
+                                secondaryAction="#agent-workbench"
+                            />
                             <WebSearchAgent />
                         </div>
                     )}
 
                     {selectedAgent.id === "browser" && (
-                        <div id="browser-setup">
+                        <div id="browser-setup" className="space-y-3">
+                            <AgentQuickStart
+                                description="Describe a browser action, verify escrow, and watch it execute live."
+                                steps={[
+                                    { label: "Connect a Stellar wallet", complete: Boolean(walletAddress) },
+                                    { label: "Describe browser actions", complete: false },
+                                    { label: "Execute automation", complete: agents.some((a) => a.id === "browser" && a.tasksCompleted > 0) },
+                                ]}
+                                ctaLabel="Start automation"
+                                ctaAction="#browser-setup"
+                                secondaryLabel="Open workspace"
+                                secondaryAction="#agent-workbench"
+                            />
                             <BrowserAgent />
                         </div>
                     )}
 
                     {selectedAgent.id === "coding" && (
-                        <section className="panel overflow-hidden">
-                        <div className="flex flex-col gap-2 border-b border-border px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5 sm:py-4">
-                                <div>
-                                    <div className="eyebrow">Coding Agent</div>
-                                    <h2 className="mt-0.5 text-base font-semibold tracking-tight text-foreground sm:mt-1 sm:text-lg">Generate the next build surface</h2>
-                                </div>
-                                <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5 text-[11px] font-semibold text-primary">
-                                    <Sparkles size={14} />
-                                    Smart-contract ready handoff
-                                </div>
+                        <>
+                        <AgentQuickStart
+                            description="Write a prompt, choose output format, and generate build-ready code artifacts."
+                            steps={[
+                                { label: "Connect a Stellar wallet", complete: Boolean(walletAddress) },
+                                { label: "Write a build prompt", complete: Boolean(codingPrompt.trim()) },
+                                { label: "Generate code output", complete: codingState === "done" },
+                            ]}
+                            ctaLabel="Write prompt"
+                            ctaAction="#agent-workbench"
+                            secondaryLabel="Open workspace"
+                            secondaryAction="#agent-workbench"
+                        />
+                        <section className="overflow-hidden rounded-xl bg-surface ring-1 ring-black/5">
+                            <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+                                <h2 className="text-[13px] font-semibold text-foreground">Coding Agent</h2>
+                                <span className="text-[10px] font-medium text-primary">Escrow-backed</span>
                             </div>
 
-                            <div className="space-y-5 p-3 sm:p-5">
-                                <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)] xl:items-start">
-                                <div className="w-full max-w-3xl space-y-4 rounded-xl border border-border bg-surface p-3 sm:rounded-2xl sm:p-5">
-                                    <div>
-                                        <label className="mb-2 block text-sm font-medium text-foreground">Task prompt</label>
-                                        <textarea
+                            <div className="grid gap-3 p-3 sm:p-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+                                <div className="space-y-4">
+                                    <StepCard
+                                        step="STEP 1"
+                                        title="Define the build task"
+                                        state={codingPrompt.trim() ? "completed" : "active"}
+                                        footer="Keep the request focused."
+                                    >
+                                        <PromptBox
                                             value={codingPrompt}
-                                            onChange={(event) => setCodingPrompt(event.target.value)}
+                                            onChange={setCodingPrompt}
                                             rows={8}
                                             disabled={codingLocked}
-                                            placeholder="Build a lightweight Web3 onboarding dashboard with wallet status, task queue, and contract deployment checklist."
-                                            className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
+                                            placeholder="Ask the agent to analyze, review, or execute..."
                                         />
-                                    </div>
+                                    </StepCard>
 
-                                    <div>
-                                        <label className="mb-2 block text-sm font-medium text-foreground">Output format</label>
+                                    <StepCard
+                                        step="STEP 2"
+                                        title="Choose output"
+                                        state="active"
+                                        badge={<span className="workspace-chip">{codingRewardXlm} XLM</span>}
+                                        footer="Escrow is created before execution."
+                                    >
                                         <select
                                             value={codingLanguage}
                                             onChange={(event) => setCodingLanguage(event.target.value)}
                                             disabled={codingLocked}
-                                            className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
+                                            className="w-full rounded-[20px] bg-background px-4 py-3 text-sm text-foreground ring-1 ring-black/5 focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
                                         >
                                             <option value="html-css-js">HTML / CSS / JS project</option>
                                             <option value="typescript">TypeScript</option>
@@ -551,296 +523,300 @@ export default function AgentsPage() {
                                             <option value="go">Go</option>
                                             <option value="rust">Rust</option>
                                         </select>
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-2 block text-sm font-medium text-foreground">Reward (XLM)</label>
                                         <input
                                             value={codingRewardXlm}
                                             onChange={(event) => setCodingRewardXlm(event.target.value)}
                                             inputMode="decimal"
                                             disabled={codingLocked}
-                                            className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
+                                            className="w-full rounded-[20px] bg-background px-4 py-3 text-sm text-foreground ring-1 ring-black/5 focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
                                         />
-                                        <p className="mt-2 text-xs text-muted">Escrowed on Soroban before the coding agent runs, then released back on completion.</p>
-                                    </div>
+                                    </StepCard>
 
-                                    <div className="flex flex-wrap gap-3">
-                                        <button
-                                            onClick={() => void runCodingAgent()}
-                                            disabled={!walletAddress || !codingPrompt.trim() || codingLocked}
-                                            className="button-primary disabled:opacity-50"
-                                        >
-                                            {codingState === "running" ? <Loader2 size={15} className="animate-spin" /> : <Braces size={15} />}
-                                            {codingState === "running" ? "Generating" : "Run Coding Agent"}
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setCodingPrompt("")
-                                                setCodingResult(null)
-                                                setCodingError(null)
-                                                setCodingState("idle")
-                                            }}
-                                            disabled={codingLocked}
-                                            className="button-secondary"
-                                        >
-                                            Reset
-                                        </button>
-                                    </div>
+                                    <StepCard
+                                        step="STEP 3"
+                                        title="Run task"
+                                        state={codingState === "done" ? "completed" : codingState === "running" ? "active" : "idle"}
+                                        footer={walletAddress ? "Run task to generate files and preview." : "Connect a wallet to continue."}
+                                    >
+                                        <div className="flex flex-wrap gap-3">
+                                            <ActionButton
+                                                onClick={() => void runCodingAgent()}
+                                                disabled={!walletAddress || !codingPrompt.trim() || codingLocked}
+                                            >
+                                                {codingState === "running" ? <Loader2 size={15} className="animate-spin" /> : <Braces size={15} />}
+                                                {codingState === "running" ? "Generating" : "Run Task"}
+                                            </ActionButton>
+                                            <ActionButton
+                                                variant="secondary"
+                                                onClick={() => {
+                                                    setCodingPrompt("")
+                                                    setCodingResult(null)
+                                                    setCodingError(null)
+                                                    setCodingState("idle")
+                                                }}
+                                                disabled={codingLocked}
+                                            >
+                                                Reset
+                                            </ActionButton>
+                                        </div>
+                                    </StepCard>
 
                                     {codingError && <ErrorBox message={codingError} />}
                                     {codingTxState && <InfoBox message={codingTxState} />}
                                     {!walletAddress && (
-                                        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+                                        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
                                             Connect a wallet before generating code artifacts.
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="hidden space-y-4 xl:sticky xl:top-4 xl:block">
-                                    <div className="rounded-xl border border-border bg-surface p-4">
-                                        <div className="eyebrow">Workflow</div>
-                                        <div className="mt-1 text-sm font-semibold text-foreground">Build delivery</div>
-                                        <p className="mt-2 text-sm leading-relaxed text-foreground-soft">
-                                            Keep prompts narrow and outcome-focused so the generated preview, bundle, and file set stay clean and production-lean.
-                                        </p>
-                                    </div>
-                                    <div className="rounded-xl border border-border bg-surface p-4">
-                                        <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Escrow</div>
-                                        <div className="mt-2 text-sm text-foreground-soft">
-                                            Reward: <span className="font-semibold text-foreground">{codingRewardXlm} XLM</span>
+                                <div className="space-y-4 xl:sticky xl:top-4">
+                                    <div className="rounded-[24px] bg-background/80 p-4 ring-1 ring-black/5">
+                                        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Status</div>
+                                        <div className="mt-2 text-sm font-semibold text-foreground">
+                                            {codingState === "running" ? "Generating build output" : codingState === "done" ? "Output ready" : "Ready to run"}
                                         </div>
-                                        <div className="mt-1 text-sm text-foreground-soft">
-                                            Status: <span className="font-semibold text-foreground">{codingState === "running" ? "In progress" : codingState === "done" ? "Ready to confirm" : codingState === "error" ? "Needs attention" : "Idle"}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                </div>
-
-                                <div className="space-y-4 rounded-xl border border-border bg-surface p-3 sm:rounded-2xl sm:p-5">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <div className="eyebrow">Output</div>
-                                            <div className="mt-1 text-sm font-semibold text-foreground">Build summary</div>
-                                        </div>
-                                        <StatusPill state={codingState} />
+                                        <p className="mt-2 text-sm text-foreground-soft">Minimal input, clean handoff, same execution flow.</p>
                                     </div>
 
-                                    {codingState === "running" && <LoadingCopy text="Generating project artifacts..." />}
-
-                                    {!codingResult && codingState !== "running" && (
-                                        <EmptyState
-                                            icon={Box}
-                                            title="No generated output yet"
-                                            body="Run the Coding Agent to produce a project preview or a single-file artifact for the next implementation step."
-                                        />
-                                    )}
-
-                                    {codingResult?.mode === "project" && (
-                                        <div className="space-y-4">
-                                            <div className="rounded-xl border border-border bg-background p-4">
-                                                <div className="text-sm font-semibold text-foreground">{codingResult.projectId}</div>
-                                                <div className="mt-1 text-sm text-foreground-soft">
-                                                    Frontend project prepared with HTML, CSS, and JavaScript assets.
-                                                </div>
+                                    <div className="space-y-4 rounded-[24px] bg-background/80 p-4 ring-1 ring-black/5">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <div className="eyebrow">Output</div>
+                                                <div className="mt-1 text-sm font-semibold text-foreground">Build summary</div>
                                             </div>
-                                            <div className="grid gap-3 sm:grid-cols-2">
-                                                <a href={codingResult.previewUrl} target="_blank" rel="noreferrer" className="button-secondary">
-                                                    <ExternalLink size={14} />
-                                                    Open Preview
-                                                </a>
-                                                <a href={`/api/download/${codingResult.projectId}`} className="button-secondary">
+                                            <StatusPill state={codingState} />
+                                        </div>
+
+                                        {codingState === "running" && <LoadingCopy text="Generating project artifacts..." />}
+
+                                        {!codingResult && codingState !== "running" && (
+                                            <EmptyState
+                                                icon={Box}
+                                                title="No generated output yet"
+                                                body="Run the agent to create the next build surface."
+                                            />
+                                        )}
+
+                                        {codingResult?.mode === "project" && (
+                                            <div className="space-y-4">
+                                                <div className="rounded-2xl bg-surface p-4 ring-1 ring-black/5">
+                                                    <div className="text-sm font-semibold text-foreground">{codingResult.projectId}</div>
+                                                    <div className="mt-1 text-sm text-foreground-soft">
+                                                        Frontend project prepared with HTML, CSS, and JavaScript assets.
+                                                    </div>
+                                                </div>
+                                                <div className="grid gap-3 sm:grid-cols-2">
+                                                    <a href={codingResult.previewUrl} target="_blank" rel="noreferrer" className="button-secondary">
+                                                        <ExternalLink size={14} />
+                                                        Open Preview
+                                                    </a>
+                                                    <a href={`/api/download/${codingResult.projectId}`} className="button-secondary">
+                                                        <Download size={14} />
+                                                        Download Bundle
+                                                    </a>
+                                                </div>
+                                                <CodePreviewTabs files={codingResult.files} />
+                                            </div>
+                                        )}
+
+                                        {codingResult?.mode === "single-file" && (
+                                            <div className="space-y-4">
+                                                <div className="rounded-2xl bg-surface p-4 ring-1 ring-black/5">
+                                                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                                                        <FileCode2 size={15} className="text-primary" />
+                                                        {codingResult.fileName}
+                                                    </div>
+                                                    <div className="mt-1 text-sm text-foreground-soft">
+                                                        Generated in {codingResult.language} and saved under {codingResult.projectId}.
+                                                    </div>
+                                                </div>
+                                                <a href={`/api/download/${codingResult.projectId}`} className="button-secondary w-full">
                                                     <Download size={14} />
-                                                    Download Bundle
+                                                    Download Source
                                                 </a>
+                                                <pre className="max-h-[480px] overflow-auto rounded-2xl bg-[#0d1117] p-4 text-xs text-gray-200 ring-1 ring-black/5">
+                                                    <code>{codingResult.code}</code>
+                                                </pre>
                                             </div>
-                                            <CodePreviewTabs files={codingResult.files} />
-                                        </div>
-                                    )}
-
-                                    {codingResult?.mode === "single-file" && (
-                                        <div className="space-y-4">
-                                            <div className="rounded-xl border border-border bg-background p-4">
-                                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                                                    <FileCode2 size={15} className="text-primary" />
-                                                    {codingResult.fileName}
-                                                </div>
-                                                <div className="mt-1 text-sm text-foreground-soft">
-                                                    Generated in {codingResult.language} and saved under {codingResult.projectId}.
-                                                </div>
-                                            </div>
-                                            <a href={`/api/download/${codingResult.projectId}`} className="button-secondary w-full">
-                                                <Download size={14} />
-                                                Download Source
-                                            </a>
-                                            <pre className="max-h-[480px] overflow-auto rounded-xl border border-border bg-[#0d1117] p-4 text-xs text-gray-200">
-                                                <code>{codingResult.code}</code>
-                                            </pre>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </section>
+                        </>
                     )}
 
                     {selectedAgent.id === "document" && (
-                        <section className="panel overflow-hidden">
-                        <div className="flex flex-col gap-2 border-b border-border px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5 sm:py-4">
-                                <div>
-                                    <div className="eyebrow">Document Agent</div>
-                                    <h2 className="mt-0.5 text-base font-semibold tracking-tight text-foreground sm:mt-1 sm:text-lg">Turn docs into implementation context</h2>
-                                </div>
-                                <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5 text-[11px] font-semibold text-primary">
-                                    <Layers3 size={14} />
-                                    Specs, briefs, and datasets
-                                </div>
+                        <>
+                        <AgentQuickStart
+                            description="Upload a file (PDF, CSV, JSON), ask a question, and get a concise analysis."
+                            steps={[
+                                { label: "Connect a Stellar wallet", complete: Boolean(walletAddress) },
+                                { label: "Upload a document", complete: Boolean(documentFile) },
+                                { label: "Analyze the file", complete: documentState === "done" },
+                            ]}
+                            ctaLabel="Upload file"
+                            ctaAction="#agent-workbench"
+                            secondaryLabel="Open workspace"
+                            secondaryAction="#agent-workbench"
+                        />
+                        <section className="overflow-hidden rounded-xl bg-surface ring-1 ring-black/5">
+                            <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+                                <h2 className="text-[13px] font-semibold text-foreground">Document Agent</h2>
+                                <span className="text-[10px] font-medium text-primary">Specs & datasets</span>
                             </div>
 
-                            <div className="space-y-5 p-3 sm:p-5">
-                                <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)] xl:items-start">
-                                <div className="w-full max-w-3xl space-y-4 rounded-xl border border-border bg-surface p-3 sm:rounded-2xl sm:p-5">
-                                    <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-border px-3 py-3 transition-all duration-200 hover:border-primary hover:bg-primary-soft sm:gap-4 sm:rounded-2xl sm:px-5 sm:py-5">
-                                        <Upload size={18} className="text-primary" />
-                                        <div>
-                                            <div className="text-sm font-semibold text-foreground">
-                                                {documentFile ? documentFile.name : "Upload a project document"}
+                            <div className="grid gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+                                <div className="space-y-4">
+                                    <StepCard
+                                        step="STEP 1"
+                                        title="Upload document"
+                                        state={documentFile ? "completed" : "active"}
+                                        footer="One file keeps the result focused."
+                                    >
+                                        <label className="flex cursor-pointer items-center gap-3 rounded-[22px] bg-background px-4 py-4 ring-1 ring-black/5 transition-all duration-200 hover:ring-primary/25 sm:gap-4 sm:px-5">
+                                            <Upload size={18} className="text-primary" />
+                                            <div>
+                                                <div className="text-sm font-semibold text-foreground">
+                                                    {documentFile ? documentFile.name : "Upload a project document"}
+                                                </div>
+                                                <div className="mt-1 text-sm text-foreground-soft">
+                                                    PDF, Excel, CSV, JSON, or TXT.
+                                                </div>
                                             </div>
-                                            <div className="mt-1 text-sm text-foreground-soft">
-                                                Supports PDF, Excel, CSV, JSON, and TXT files.
-                                            </div>
-                                        </div>
-                                        <input
-                                            type="file"
-                                            accept=".pdf,.xlsx,.xls,.csv,.json,.txt"
-                                            onChange={(event) => setDocumentFile(event.target.files?.[0] ?? null)}
-                                            disabled={documentLocked}
-                                            className="hidden"
-                                        />
-                                    </label>
+                                            <input
+                                                type="file"
+                                                accept=".pdf,.xlsx,.xls,.csv,.json,.txt"
+                                                onChange={(event) => setDocumentFile(event.target.files?.[0] ?? null)}
+                                                disabled={documentLocked}
+                                                className="hidden"
+                                            />
+                                        </label>
+                                    </StepCard>
 
-                                    <div>
-                                        <label className="mb-2 block text-sm font-medium text-foreground">Question or focus area</label>
-                                        <textarea
+                                    <StepCard
+                                        step="STEP 2"
+                                        title="Set the focus"
+                                        state={documentQuestion.trim() ? "completed" : documentFile ? "active" : "idle"}
+                                        badge={<span className="workspace-chip">{documentRewardXlm} XLM</span>}
+                                        footer="Ask one focused question."
+                                    >
+                                        <PromptBox
                                             value={documentQuestion}
-                                            onChange={(event) => setDocumentQuestion(event.target.value)}
+                                            onChange={setDocumentQuestion}
                                             rows={6}
                                             disabled={documentLocked}
-                                            placeholder="Summarize the product requirements and list the implementation constraints that matter for Web3 integration."
-                                            className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
+                                            placeholder="Ask the agent to analyze, review, or execute..."
                                         />
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-2 block text-sm font-medium text-foreground">Reward (XLM)</label>
                                         <input
                                             value={documentRewardXlm}
                                             onChange={(event) => setDocumentRewardXlm(event.target.value)}
                                             inputMode="decimal"
                                             disabled={documentLocked}
-                                            className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
+                                            className="w-full rounded-[20px] bg-background px-4 py-3 text-sm text-foreground ring-1 ring-black/5 focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
                                         />
-                                        <p className="mt-2 text-xs text-muted">Escrowed on Soroban before the document task starts.</p>
-                                    </div>
+                                    </StepCard>
 
-                                    <div className="flex flex-wrap gap-3">
-                                        <button
-                                            onClick={() => void runDocumentAgent()}
-                                            disabled={!walletAddress || !documentFile || documentLocked}
-                                            className="button-primary disabled:opacity-50"
-                                        >
-                                            {documentState === "running" ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
-                                            {documentState === "running" ? "Analyzing" : "Run Document Agent"}
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setDocumentFile(null)
-                                                setDocumentQuestion("")
-                                                setDocumentResult(null)
-                                                setDocumentError(null)
-                                                setDocumentState("idle")
-                                            }}
-                                            disabled={documentLocked}
-                                            className="button-secondary"
-                                        >
-                                            Clear
-                                        </button>
-                                    </div>
+                                    <StepCard
+                                        step="STEP 3"
+                                        title="Run task"
+                                        state={documentState === "done" ? "completed" : documentState === "running" ? "active" : "idle"}
+                                        footer={walletAddress ? "Analyze the uploaded file." : "Connect a wallet to continue."}
+                                    >
+                                        <div className="flex flex-wrap gap-3">
+                                            <ActionButton
+                                                onClick={() => void runDocumentAgent()}
+                                                disabled={!walletAddress || !documentFile || documentLocked}
+                                            >
+                                                {documentState === "running" ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
+                                                {documentState === "running" ? "Analyzing" : "Run Task"}
+                                            </ActionButton>
+                                            <ActionButton
+                                                variant="secondary"
+                                                onClick={() => {
+                                                    setDocumentFile(null)
+                                                    setDocumentQuestion("")
+                                                    setDocumentResult(null)
+                                                    setDocumentError(null)
+                                                    setDocumentState("idle")
+                                                }}
+                                                disabled={documentLocked}
+                                            >
+                                                Clear
+                                            </ActionButton>
+                                        </div>
+                                    </StepCard>
 
                                     {documentError && <ErrorBox message={documentError} />}
                                     {documentTxState && <InfoBox message={documentTxState} />}
                                     {!walletAddress && (
-                                        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+                                        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
                                             Connect a wallet before uploading and analyzing documents.
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="hidden space-y-4 xl:sticky xl:top-4 xl:block">
-                                    <div className="rounded-xl border border-border bg-surface p-4">
-                                        <div className="eyebrow">Best Input</div>
-                                        <div className="mt-1 text-sm font-semibold text-foreground">Focused analysis</div>
-                                        <p className="mt-2 text-sm leading-relaxed text-foreground-soft">
-                                            Upload one source file, then ask a single practical question around requirements, constraints, or implementation decisions.
-                                        </p>
-                                    </div>
-                                    <div className="rounded-xl border border-border bg-surface p-4">
-                                        <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Escrow</div>
-                                        <div className="mt-2 text-sm text-foreground-soft">
-                                            Reward: <span className="font-semibold text-foreground">{documentRewardXlm} XLM</span>
+                                <div className="space-y-4 xl:sticky xl:top-4">
+                                    <div className="rounded-[24px] bg-background/80 p-4 ring-1 ring-black/5">
+                                        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Status</div>
+                                        <div className="mt-2 text-sm font-semibold text-foreground">
+                                            {documentState === "running" ? "Analyzing document" : documentState === "done" ? "Analysis ready" : "Ready to analyze"}
                                         </div>
-                                        <div className="mt-1 text-sm text-foreground-soft">
-                                            Status: <span className="font-semibold text-foreground">{documentState === "running" ? "Analyzing" : documentState === "done" ? "Ready to confirm" : documentState === "error" ? "Needs attention" : "Idle"}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                </div>
-
-                                <div className="space-y-4 rounded-xl border border-border bg-surface p-3 sm:rounded-2xl sm:p-5">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <div className="eyebrow">Analysis</div>
-                                            <div className="mt-1 text-sm font-semibold text-foreground">Processed document output</div>
-                                        </div>
-                                        <StatusPill state={documentState} />
+                                        <p className="mt-2 text-sm text-foreground-soft">Focused analysis with less UI noise.</p>
                                     </div>
 
-                                    {documentState === "running" && <LoadingCopy text="Parsing and analyzing the document..." />}
+                                    <div className="space-y-4 rounded-[24px] bg-background/80 p-4 ring-1 ring-black/5">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <div className="eyebrow">Analysis</div>
+                                                <div className="mt-1 text-sm font-semibold text-foreground">Processed output</div>
+                                            </div>
+                                            <StatusPill state={documentState} />
+                                        </div>
 
-                                    {!documentResult && documentState !== "running" && (
-                                        <EmptyState
-                                            icon={FileText}
-                                            title="No document analysis yet"
-                                            body="Upload a source document to extract constraints, requirements, or implementation notes for the team."
-                                        />
-                                    )}
+                                        {documentState === "running" && <LoadingCopy text="Parsing and analyzing the document..." />}
 
-                                    {documentResult && (
-                                        <div className="space-y-4">
-                                            <div className="rounded-xl border border-border bg-background p-4 text-sm">
-                                                <div className="font-semibold text-foreground">{documentResult.fileName}</div>
-                                                <div className="mt-1 text-foreground-soft">
-                                                    Detected type: <span className="uppercase">{documentResult.fileType}</span>
-                                                </div>
-                                                {documentResult.truncated && (
-                                                    <div className="mt-2 text-xs text-warning">
-                                                        Content was trimmed to fit the analysis window.
+                                        {!documentResult && documentState !== "running" && (
+                                            <EmptyState
+                                                icon={FileText}
+                                                title="No document analysis yet"
+                                                body="Upload one file and run the task."
+                                            />
+                                        )}
+
+                                        {documentResult && (
+                                            <div className="space-y-4">
+                                                <div className="rounded-2xl bg-surface p-4 text-sm ring-1 ring-black/5">
+                                                    <div className="font-semibold text-foreground">{documentResult.fileName}</div>
+                                                    <div className="mt-1 text-foreground-soft">
+                                                        Detected type: <span className="uppercase">{documentResult.fileType}</span>
                                                     </div>
-                                                )}
+                                                    {documentResult.truncated && (
+                                                        <div className="mt-2 text-xs text-warning">
+                                                            Content was trimmed to fit the analysis window.
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="prose prose-sm max-w-none dark:prose-invert">
+                                                    <ReactMarkdown components={mdComponents}>{documentResult.analysis}</ReactMarkdown>
+                                                </div>
                                             </div>
-                                            <div className="prose prose-sm max-w-none dark:prose-invert">
-                                                <ReactMarkdown components={mdComponents}>{documentResult.analysis}</ReactMarkdown>
-                                            </div>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </section>
+                        </>
                     )}
                 </div>
             </section>
         </div>
     )
 }
+
+
+
 
 function StatusPill({ state }: { state: RunState }) {
     const label =
@@ -860,7 +836,7 @@ function StatusPill({ state }: { state: RunState }) {
 
 function LoadingCopy({ text }: { text: string }) {
     return (
-        <div className="rounded-xl border border-border bg-background p-4">
+        <div className="rounded-2xl bg-surface p-4 ring-1 ring-black/5">
             <div className="flex items-center gap-2 text-sm text-foreground-soft">
                 <Loader2 size={15} className="animate-spin text-primary" />
                 {text}
@@ -879,7 +855,7 @@ function EmptyState({
     body: string
 }) {
     return (
-        <div className="rounded-xl border border-dashed border-border bg-background px-4 py-10 text-center">
+        <div className="rounded-2xl bg-surface px-4 py-10 text-center ring-1 ring-black/5">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary">
                 <Icon size={20} />
             </div>
@@ -891,7 +867,7 @@ function EmptyState({
 
 function ErrorBox({ message }: { message: string }) {
     return (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-600 dark:text-red-400">
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-600 dark:text-red-400">
             <div className="flex items-start gap-2">
                 <AlertCircle size={15} className="mt-0.5 shrink-0" />
                 <span>{message}</span>
@@ -902,7 +878,7 @@ function ErrorBox({ message }: { message: string }) {
 
 function InfoBox({ message }: { message: string }) {
     return (
-        <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground-soft">
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground-soft">
             {message}
         </div>
     )
@@ -915,8 +891,8 @@ function CodePreviewTabs({ files }: { files: GeneratedFiles }) {
     const activeFile = files[selectedTab] ?? ""
 
     return (
-        <div className="rounded-xl border border-border">
-            <div className="flex flex-wrap border-b border-border">
+        <div className="overflow-hidden rounded-2xl ring-1 ring-black/5">
+            <div className="flex flex-wrap bg-surface">
                 {fileNames.map((fileName) => (
                     <button
                         key={fileName}

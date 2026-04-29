@@ -1,13 +1,16 @@
 "use client"
 
-import { usePathname } from "next/navigation"
-import { Activity, BarChart3, Settings, Sparkles, Wallet } from "lucide-react"
 import Link from "next/link"
+import { ArrowRight, Activity, BarChart3, Settings, Sparkles, Wallet } from "lucide-react"
 import BrandLogo from "@/components/layout/BrandLogo"
 import { ThemeToggle } from "@/components/ThemeToggle"
-import ConnectWalletButton from "@/components/wallet/ConnectWalletButton"
-import { useWalletContext } from "@/lib/WalletContext"
-import { useHasMounted } from "@/lib/useHasMounted"
+
+type LandingNavbarProps = {
+    mounted: boolean
+    walletAddress: string | null
+    shortWalletAddress: string | null
+    walletBalance: string | null
+}
 
 const NAV_ITEMS = [
     { href: "/agents", label: "Workspace" },
@@ -16,13 +19,14 @@ const NAV_ITEMS = [
     { href: "/settings", label: "Settings" },
 ]
 
-export default function TopNavbar() {
-    const mounted = useHasMounted()
-    const { disconnectWallet, shortWalletAddress, walletAddress, walletBalance } = useWalletContext()
-    const pathname = usePathname()
-
+export default function LandingNavbar({
+    mounted,
+    walletAddress,
+    shortWalletAddress,
+    walletBalance,
+}: LandingNavbarProps) {
     return (
-        <header className="sticky top-0 z-30 shrink-0 px-3 pt-3 sm:px-5 sm:pt-4">
+        <header className="sticky top-0 z-30 px-3 pt-3 sm:px-5 sm:pt-4">
             <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 rounded-xl bg-surface/90 px-4 py-2.5 ring-1 ring-black/5 backdrop-blur-md sm:px-5">
                 <div className="flex min-w-0 items-center gap-3">
                     <BrandLogo href="/" priority />
@@ -33,11 +37,7 @@ export default function TopNavbar() {
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors duration-150 ${
-                                pathname === item.href
-                                    ? "bg-primary-soft text-foreground"
-                                    : "text-foreground-soft hover:bg-surface-elevated hover:text-foreground"
-                            }`}
+                            className="rounded-lg px-3 py-1.5 text-[12px] font-medium text-foreground-soft transition-colors duration-150 hover:bg-surface-elevated hover:text-foreground"
                         >
                             {item.label}
                         </Link>
@@ -57,20 +57,19 @@ export default function TopNavbar() {
                         </div>
                     )}
 
-                    {mounted && (
-                        <div className="flex items-center gap-1.5">
-                            <ConnectWalletButton className={`${walletAddress ? "button-secondary" : "button-primary"} !min-h-[32px] !rounded-lg !px-3 !py-1 !text-[11px] sm:!min-h-[36px] sm:!px-3 sm:!py-1.5 sm:!text-xs`} />
-                            {walletAddress && (
-                                <button onClick={() => void disconnectWallet()} className="button-ghost !min-h-[32px] !rounded-lg !px-2 !text-[11px] sm:!min-h-[36px] sm:!px-2.5 sm:!text-xs">
-                                    Disconnect
-                                </button>
-                            )}
-                        </div>
-                    )}
+                    <Link
+                        href="/agents"
+                        className="inline-flex min-h-[36px] items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-[12px] font-semibold text-white transition-opacity duration-150 hover:opacity-90"
+                    >
+                        <Sparkles size={13} />
+                        <span className="hidden sm:inline">Open Workspace</span>
+                        <span className="sm:hidden">Workspace</span>
+                        <ArrowRight size={12} />
+                    </Link>
                 </div>
             </div>
 
-            {/* Mobile nav row — matches landing navbar style */}
+            {/* Mobile nav row */}
             <div className="mx-auto mt-2 flex w-full max-w-7xl items-center justify-center gap-1.5 overflow-x-auto px-1 pb-1 lg:hidden">
                 {NAV_ITEMS.map((item, index) => {
                     const Icon =
@@ -83,11 +82,7 @@ export default function TopNavbar() {
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium ring-1 ring-black/5 transition-colors duration-150 ${
-                                pathname === item.href
-                                    ? "bg-primary-soft text-foreground"
-                                    : "bg-surface/80 text-foreground-soft hover:text-foreground"
-                            }`}
+                            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-surface/80 px-2.5 py-1.5 text-[11px] font-medium text-foreground-soft ring-1 ring-black/5 transition-colors duration-150 hover:text-foreground"
                         >
                             <Icon size={12} />
                             {item.label}

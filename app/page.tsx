@@ -1,86 +1,89 @@
 "use client"
 
-import Link from "next/link"
-import { ArrowRight, Braces, FileText, Github, Globe2, Mail, MonitorPlay } from "lucide-react"
-import BrandLogo from "@/components/layout/BrandLogo"
-import ConnectWalletButton from "@/components/wallet/ConnectWalletButton"
+import LandingNavbar from "@/components/landing/LandingNavbar"
+import HeroSection from "@/components/landing/HeroSection"
+import SummaryStrip from "@/components/landing/SummaryStrip"
+import FeatureGrid from "@/components/landing/FeatureGrid"
+import CollapsiblePanel from "@/components/landing/CollapsiblePanel"
+import CurrentStatusPanel from "@/components/landing/CurrentStatusPanel"
+import { useAgentContext } from "@/lib/AgentContext"
 import { useWalletContext } from "@/lib/WalletContext"
 import { useHasMounted } from "@/lib/useHasMounted"
+import { getGitHubSession } from "@/lib/wallet/githubSession"
 
-const AGENTS = [
-    { label: "GitHub Agent", icon: Github },
-    { label: "Coding Agent", icon: Braces },
-    { label: "Document Agent", icon: FileText },
-    { label: "Email Agent", icon: Mail },
-    { label: "Web Search Agent", icon: Globe2 },
-    { label: "Browser Agent", icon: MonitorPlay },
+const AGENT_INFO = [
+    {
+        label: "GitHub Agent",
+        description: "Connect repositories, inspect code, and review architecture without leaving the workspace.",
+    },
+    {
+        label: "Coding Agent",
+        description: "Generate build-ready project artifacts and previews for the next implementation step.",
+    },
+    {
+        label: "Document Agent",
+        description: "Upload product docs, specs, or data files and turn them into concise working context.",
+    },
+    {
+        label: "Email Agent",
+        description: "Draft and send escrow-backed email workflows through the existing delivery setup.",
+    },
+    {
+        label: "Web Search Agent",
+        description: "Run live web research and get source-backed summaries inside the same execution layer.",
+    },
+    {
+        label: "Browser Agent",
+        description: "Control a visible browser session and stream actions back into the product workflow.",
+    },
 ]
 
 export default function Home() {
-    const { walletAddress, shortWalletAddress, walletBalance } = useWalletContext()
     const mounted = useHasMounted()
+    const { agents, activities } = useAgentContext()
+    const { walletAddress, shortWalletAddress, walletBalance } = useWalletContext()
+
+    const hasGitHubConnection = Boolean(getGitHubSession(walletAddress)?.accessToken)
+    const hasCompletedTask = agents.some((agent) => agent.tasksCompleted > 0)
+    const lastActivity = activities[0]?.message ?? null
 
     return (
-        <div className="flex min-h-screen min-h-dvh flex-col">
-            <header className="flex min-h-[62px] items-center justify-between px-5 py-4 sm:min-h-[66px] sm:px-8">
-                <BrandLogo imageClassName="max-h-[2.7rem] w-auto sm:max-h-[2.95rem]" priority />
-                <div className="flex items-center gap-2">
-                    {!mounted ? (
-                        <div className="h-9 w-20" />
-                    ) : (
-                        <>
-                            {walletAddress && (
-                                <div className="hidden rounded-lg border border-border px-3 py-2 text-xs text-foreground-soft sm:block">
-                                    {shortWalletAddress} | {walletBalance ?? "0.0000000"} XLM
-                                </div>
-                            )}
-                            {walletAddress ? (
-                                <Link href="/agents" className="button-primary text-sm">
-                                    Open Workspace
-                                    <ArrowRight size={14} />
-                                </Link>
-                            ) : (
-                                <ConnectWalletButton className="button-primary text-sm" />
-                            )}
-                        </>
-                    )}
-                </div>
-            </header>
+        <div className="min-h-screen min-h-dvh bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.12),transparent_26%),radial-gradient(circle_at_bottom_right,rgba(15,118,110,0.10),transparent_24%),var(--background)] pb-16">
+            <LandingNavbar
+                mounted={mounted}
+                walletAddress={walletAddress}
+                shortWalletAddress={shortWalletAddress}
+                walletBalance={walletBalance}
+            />
 
-            <main className="flex flex-1 flex-col items-center justify-center px-5 pb-20 sm:px-6 sm:pb-24">
-                <div className="mx-auto max-w-2xl text-center">
-                    <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground sm:text-5xl">
-                        Web3 identity first, agent workspace second.
-                    </h1>
-                    <p className="mx-auto mt-4 max-w-lg text-[15px] leading-relaxed text-foreground-soft sm:text-base">
-                        Connect a Stellar testnet wallet to use the GitHub, Coding, Document, Email, Web Search, and Browser agents with a cleaner
-                        identity model that is ready for smart contract integration.
-                    </p>
+            <main className="px-4 pt-4 sm:px-6 sm:pt-6">
+                <div className="mx-auto grid w-full max-w-7xl gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+                    <div className="space-y-6">
+                        <HeroSection mounted={mounted} walletAddress={walletAddress} />
 
-                    <div className="mt-8 flex justify-center gap-3">
-                        {!mounted ? (
-                            <div className="h-11 w-32" />
-                        ) : walletAddress ? (
-                            <Link href="/agents" className="button-primary">
-                                Open Workspace
-                                <ArrowRight size={14} />
-                            </Link>
-                        ) : (
-                            <ConnectWalletButton className="button-primary" label="Connect Wallet" />
-                        )}
+                        <SummaryStrip
+                            walletAddress={walletAddress}
+                            shortWalletAddress={shortWalletAddress}
+                            walletBalance={walletBalance}
+                            agentCount={agents.length}
+                        />
+
+                        <FeatureGrid />
+
+                        <CollapsiblePanel
+                            walletConnected={Boolean(walletAddress)}
+                            hasCompletedTask={hasCompletedTask}
+                            hasGitHubConnection={hasGitHubConnection}
+                            agents={AGENT_INFO}
+                        />
                     </div>
-                </div>
 
-                <div className="mt-12 flex flex-wrap justify-center gap-2 sm:mt-16 sm:gap-3">
-                    {AGENTS.map((agent) => {
-                        const Icon = agent.icon
-                        return (
-                            <div key={agent.label} className="flex items-center gap-2 rounded-lg bg-surface-elevated px-3 py-2.5 text-xs text-foreground-soft" style={{ minHeight: 40 }}>
-                                <Icon size={14} className="text-muted" />
-                                {agent.label}
-                            </div>
-                        )
-                    })}
+                    <CurrentStatusPanel
+                        walletAddress={walletAddress}
+                        shortWalletAddress={shortWalletAddress}
+                        hasGitHubConnection={hasGitHubConnection}
+                        lastActivity={lastActivity}
+                    />
                 </div>
             </main>
         </div>

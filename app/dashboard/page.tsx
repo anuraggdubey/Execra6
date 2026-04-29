@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Activity, CheckCircle2, Coins, Loader2, ShieldCheck, Sparkles, Users, Wallet } from "lucide-react"
+import { Activity, CheckCircle2, Coins, Loader2, ShieldCheck, Sparkles, Users } from "lucide-react"
 import { useAgentContext } from "@/lib/AgentContext"
 import { useWalletContext } from "@/lib/WalletContext"
 import type { TaskRecord } from "@/types/tasks"
@@ -92,188 +92,133 @@ export default function DashboardPage() {
     )
 
     return (
-        <div className="mx-auto max-w-6xl space-y-6">
-            <section className="rounded-2xl border border-border bg-surface px-5 py-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                    <div>
-                        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Metrics Dashboard</div>
-                        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">Workspace health and fee sponsorship status</h1>
-                        <p className="mt-2 max-w-2xl text-sm text-foreground-soft">
-                            This view pulls runtime configuration, recent task activity, wallet state, and sponsorship usage into one place for demo and monitoring proof.
-                        </p>
-                    </div>
-                    <div className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground-soft">
-                        {walletAddress ? `Wallet: ${shortWalletAddress} | ${walletBalance ?? "0"} XLM` : "Connect a wallet to load your sponsorship usage"}
-                    </div>
+        <div className="mx-auto max-w-5xl space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-lg font-semibold tracking-tight text-foreground">Dashboard</h1>
+                    <p className="mt-0.5 text-[13px] text-foreground-soft">
+                        {walletAddress ? `${shortWalletAddress} · ${walletBalance ?? "0"} XLM` : "Connect wallet to see your data"}
+                    </p>
                 </div>
+                {loading && <Loader2 size={16} className="animate-spin text-primary" />}
+            </div>
+
+            {/* Metric cards */}
+            <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+                <MetricCard icon={<Sparkles size={15} />} label="Agents" value={agents.length.toString()} tone="text-primary" />
+                <MetricCard icon={<Users size={15} />} label="Users" value={userCount.toString()} tone="text-violet-500" />
+                <MetricCard icon={<CheckCircle2 size={15} />} label="Completed" value={totalCompletedTasks.toString()} tone="text-emerald-500" />
+                <MetricCard icon={<Coins size={15} />} label="Earnings" value={`${totalAgentEarnings}`} tone="text-amber-500" />
+                <MetricCard icon={<ShieldCheck size={15} />} label="Sponsored" value={walletAddress ? sponsoredWalletTasks.toString() : "0"} tone="text-sky-500" />
             </section>
 
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-                <MetricCard
-                    icon={<Sparkles size={16} />}
-                    label="Agents Configured"
-                    value={agents.length.toString()}
-                    tone="text-primary"
-                />
-                <MetricCard
-                    icon={<Users size={16} />}
-                    label="Total Users"
-                    value={userCount.toString()}
-                    tone="text-violet-500"
-                />
-                <MetricCard
-                    icon={<CheckCircle2 size={16} />}
-                    label="Completed Runs"
-                    value={totalCompletedTasks.toString()}
-                    tone="text-emerald-500"
-                />
-                <MetricCard
-                    icon={<Coins size={16} />}
-                    label="Agent Earnings"
-                    value={`${totalAgentEarnings}`}
-                    tone="text-amber-500"
-                />
-                <MetricCard
-                    icon={<ShieldCheck size={16} />}
-                    label="Sponsored Wallet Tasks"
-                    value={walletAddress ? sponsoredWalletTasks.toString() : "0"}
-                    tone="text-sky-500"
-                />
-            </section>
-
-            <section className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
-                <div className="rounded-2xl border border-border bg-surface p-5">
-                    <div className="flex items-center justify-between gap-3">
-                        <div>
-                            <div className="text-sm font-semibold text-foreground">Platform Monitoring</div>
-                            <div className="mt-1 text-sm text-foreground-soft">Live status from the platform status route and the local workspace context.</div>
-                        </div>
-                        {loading && <Loader2 size={16} className="animate-spin text-primary" />}
-                    </div>
-
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {/* Platform status */}
+            <section className="grid gap-3 xl:grid-cols-2">
+                <div className="rounded-xl border border-border bg-surface p-4">
+                    <div className="text-[13px] font-semibold text-foreground">Platform Status</div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
                         <StatusCard
-                            label="LLM Provider"
+                            label="LLM"
                             value={platformStatus?.llm.configured ? platformStatus.llm.model : "Not configured"}
                             status={platformStatus?.llm.available ? "Healthy" : "Attention"}
                         />
                         <StatusCard
-                            label="GitHub OAuth"
+                            label="GitHub"
                             value={platformStatus?.tools.github.configured ? "Configured" : "Missing"}
                             status={platformStatus?.tools.github.configured ? "Ready" : "Attention"}
                         />
                         <StatusCard
-                            label="Wallet Auth"
+                            label="Auth"
                             value={platformStatus?.auth.mode ?? "wallet"}
                             status={isHydrated ? "Live" : "Loading"}
                         />
                         <StatusCard
-                            label="Recent Activity Events"
+                            label="Events"
                             value={activities.length.toString()}
                             status={activities.length > 0 ? "Active" : "Idle"}
                         />
                     </div>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-surface p-5">
-                    <div className="text-sm font-semibold text-foreground">Fee Sponsorship Usage</div>
-                    <div className="mt-1 text-sm text-foreground-soft">
-                        Use `/settings` to switch `Fee Mode` to `Sponsored Fee Bump`, optionally save a sponsor address for display, then run any agent flow as usual.
-                    </div>
-
-                    <div className="mt-4 space-y-3 text-sm">
-                        <InfoRow label="Step 1" value="Connect a Freighter, xBull, or Albedo wallet." />
-                        <InfoRow label="Step 2" value="Open Settings and save Sponsorship mode." />
-                        <InfoRow label="Step 3" value="Run a task from the workspace." />
-                        <InfoRow label="Step 4" value="The app routes the signed transaction through /api/soroban/sponsor." />
-                    </div>
-
-                    <div className="mt-4 rounded-xl border border-border bg-background p-4 text-sm text-foreground-soft">
-                        <div className="flex items-center gap-2 font-medium text-foreground">
-                            <Wallet size={15} className="text-primary" />
-                            Wallet-specific usage
-                        </div>
-                        <div className="mt-2">Total users / wallets connected: {userCount}</div>
-                        <div className="mt-1">Sponsored tasks for this wallet: {walletAddress ? sponsoredWalletTasks : 0}</div>
-                        <div className="mt-1">Recent wallet tasks loaded: {walletAddress ? walletTasks.length : 0}</div>
+                <div className="rounded-xl border border-border bg-surface p-4">
+                    <div className="text-[13px] font-semibold text-foreground">Fee Sponsorship</div>
+                    <p className="mt-1 text-[12px] text-foreground-soft">
+                        Enable sponsored fees in Settings, then run any agent task.
+                    </p>
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                        <MiniStat label="Users" value={userCount.toString()} />
+                        <MiniStat label="Sponsored" value={walletAddress ? sponsoredWalletTasks.toString() : "0"} />
+                        <MiniStat label="Wallet Tasks" value={walletAddress ? walletTasks.length.toString() : "0"} />
                     </div>
                 </div>
             </section>
 
-            <section className="grid gap-4 xl:grid-cols-2">
-                <TaskTable title="Recent Network Tasks" tasks={recentTasks} />
-                <TaskTable title="Connected Wallet Tasks" tasks={walletTasks} />
+            {/* Task tables */}
+            <section className="grid gap-3 xl:grid-cols-2">
+                <TaskTable title="Recent Tasks" tasks={recentTasks} />
+                <TaskTable title="Wallet Tasks" tasks={walletTasks} />
             </section>
         </div>
     )
 }
 
-function MetricCard({
-    icon,
-    label,
-    value,
-    tone,
-}: {
-    icon: React.ReactNode
-    label: string
-    value: string
-    tone: string
-}) {
+function MetricCard({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: string; tone: string }) {
     return (
-        <div className="rounded-2xl border border-border bg-surface p-4">
-            <div className={`flex items-center gap-2 text-sm font-medium ${tone}`}>{icon}{label}</div>
-            <div className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{value}</div>
+        <div className="rounded-xl border border-border bg-surface p-3">
+            <div className={`flex items-center gap-1.5 text-[11px] font-medium ${tone}`}>{icon}{label}</div>
+            <div className="mt-2 text-xl font-semibold tracking-tight text-foreground">{value}</div>
         </div>
     )
 }
 
 function StatusCard({ label, value, status }: { label: string; value: string; status: string }) {
     return (
-        <div className="rounded-xl border border-border bg-background p-4">
-            <div className="text-xs font-semibold uppercase tracking-widest text-muted">{label}</div>
-            <div className="mt-2 text-sm font-semibold text-foreground">{value}</div>
-            <div className="mt-1 text-xs text-foreground-soft">{status}</div>
+        <div className="rounded-lg border border-border bg-background px-3 py-2.5">
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-muted">{label}</div>
+            <div className="mt-1 text-[13px] font-medium text-foreground">{value}</div>
+            <div className="mt-0.5 text-[11px] text-foreground-soft">{status}</div>
         </div>
     )
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function MiniStat({ label, value }: { label: string; value: string }) {
     return (
-        <div className="flex items-start gap-3 rounded-xl border border-border bg-background px-3 py-3">
-            <div className="min-w-14 text-xs font-semibold uppercase tracking-[0.08em] text-muted">{label}</div>
-            <div className="text-sm text-foreground-soft">{value}</div>
+        <div className="rounded-lg bg-background px-3 py-2 text-center ring-1 ring-black/5">
+            <div className="text-[10px] font-medium uppercase tracking-wider text-muted">{label}</div>
+            <div className="mt-1 text-base font-semibold text-foreground">{value}</div>
         </div>
     )
 }
 
 function TaskTable({ title, tasks }: { title: string; tasks: TaskRecord[] }) {
     return (
-        <div className="rounded-2xl border border-border bg-surface p-5">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <Activity size={16} className="text-primary" />
+        <div className="rounded-xl border border-border bg-surface p-4">
+            <div className="flex items-center gap-1.5 text-[13px] font-semibold text-foreground">
+                <Activity size={14} className="text-primary" />
                 {title}
             </div>
 
             {tasks.length === 0 ? (
-                <div className="mt-4 rounded-xl border border-dashed border-border bg-background px-4 py-8 text-center text-sm text-foreground-soft">
-                    No task data yet.
+                <div className="mt-3 rounded-lg border border-dashed border-border bg-background px-3 py-6 text-center text-[13px] text-foreground-soft">
+                    No tasks yet
                 </div>
             ) : (
-                <div className="mt-4 overflow-hidden rounded-xl border border-border">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-background text-xs uppercase tracking-[0.08em] text-muted">
+                <div className="mt-3 overflow-hidden rounded-lg border border-border">
+                    <table className="w-full text-left text-[13px]">
+                        <thead className="bg-background text-[10px] uppercase tracking-[0.08em] text-muted">
                             <tr>
-                                <th className="px-4 py-3">Agent</th>
-                                <th className="px-4 py-3">Status</th>
-                                <th className="px-4 py-3">Fee</th>
+                                <th className="px-3 py-2">Agent</th>
+                                <th className="px-3 py-2">Status</th>
+                                <th className="px-3 py-2">Fee</th>
                             </tr>
                         </thead>
                         <tbody>
                             {tasks.map((task) => (
                                 <tr key={task.id} className="border-t border-border">
-                                    <td className="px-4 py-3 capitalize text-foreground">{task.agent_type}</td>
-                                    <td className="px-4 py-3 text-foreground-soft">{task.on_chain_status}</td>
-                                    <td className="px-4 py-3 text-foreground-soft">
+                                    <td className="px-3 py-2 capitalize text-foreground">{task.agent_type}</td>
+                                    <td className="px-3 py-2 text-foreground-soft">{task.on_chain_status}</td>
+                                    <td className="px-3 py-2 text-foreground-soft">
                                         {task.feature_config?.feeMode === "sponsored" ? "Sponsored" : "User paid"}
                                     </td>
                                 </tr>

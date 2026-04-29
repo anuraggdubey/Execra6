@@ -2,6 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
+import logoImage from "@/Screenshots/logo2.png"
 
 type BrandLogoProps = {
     href?: string
@@ -17,15 +18,14 @@ export default function BrandLogo({
     priority = false,
 }: BrandLogoProps) {
     return (
-        <Link href={href} aria-label="Execra home" className={`inline-flex shrink-0 items-center ${className}`.trim()}>
+        <Link href={href} aria-label="Execra home" className={`inline-flex shrink-0 items-center gap-1.5 ${className}`.trim()}>
             <Image
-                src="/execra-logo.png"
+                src={logoImage}
                 alt="Execra"
-                width={1491}
-                height={1055}
                 priority={priority}
-                className={`h-auto w-[88px] sm:w-[100px] ${imageClassName}`.trim()}
+                className={`h-auto w-[28px] sm:w-[32px] ${imageClassName}`.trim()}
             />
+            <span className="text-sm font-bold tracking-tight text-foreground sm:text-base">Execra</span>
         </Link>
     )
 }
