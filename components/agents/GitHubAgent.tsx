@@ -455,32 +455,30 @@ export default function GitHubAgent() {
     const isReadyForPrompt = Boolean(walletAddress && selectedRepo && repoContext)
 
     return (
-        <div className="space-y-4 sm:space-y-5">
+        <div className="space-y-3">
             {error && (
-                <div className="flex items-start gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 p-3.5 sm:p-4">
-                    <AlertCircle size={16} className="mt-0.5 shrink-0 text-red-500" />
-                    <div className="min-w-0 text-[13px] leading-relaxed text-red-600 dark:text-red-400 sm:text-sm">{error}</div>
+                <div className="flex items-center gap-2 rounded-xl bg-red-500/5 px-3 py-2 text-[12px] text-red-600 dark:text-red-400">
+                    <AlertCircle size={14} className="shrink-0" />
+                    <span className="min-w-0">{error}</span>
                 </div>
             )}
 
             {!walletAddress && (
-                <div className="flex items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3.5 sm:p-4">
-                    <Wallet size={16} className="mt-0.5 shrink-0 text-amber-500" />
-                    <div className="min-w-0 text-[13px] leading-relaxed text-amber-700 dark:text-amber-300 sm:text-sm">
-                        Connect a Stellar wallet before using the GitHub agent.
-                    </div>
+                <div className="flex items-center gap-2 rounded-xl bg-amber-500/5 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-300">
+                    <Wallet size={14} className="shrink-0" />
+                    Connect a Stellar wallet before using the GitHub agent.
                 </div>
             )}
 
             {txState && (
-                <div className="rounded-xl border border-primary/15 bg-primary/5 px-3 py-2 text-[12px] text-foreground-soft">
+                <div className="rounded-lg bg-primary/5 px-3 py-1.5 text-[11px] text-foreground-soft">
                     {txState}
                 </div>
             )}
 
-
-            <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_280px]">
-                <div className="space-y-4">
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_260px]">
+                <div className="space-y-3">
+                    {/* ── Step 1: Connect GitHub ── */}
                     <StepCard
                         step="STEP 1"
                         title="Connect GitHub"
@@ -493,149 +491,170 @@ export default function GitHubAgent() {
                             onChange={(event) => setRewardXlm(event.target.value)}
                             inputMode="decimal"
                             disabled={agentLocked}
-                            className="w-full rounded-[20px] bg-background px-4 py-3 text-sm text-foreground ring-1 ring-black/5 focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
+                            className="w-full rounded-lg bg-background px-3 py-2 text-[13px] text-foreground focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
                         />
 
                         {!githubConfigured && (
-                            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-300">
+                            <div className="rounded-lg bg-amber-500/5 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-300">
                                 GitHub OAuth is not configured. Public repositories still work below.
                             </div>
                         )}
 
                         {walletAddress && !ghUser && githubConfigured && (
-                            <ActionButton type="button" onClick={beginOAuth} disabled={connecting || agentLocked} className="w-full">
-                                {connecting ? <Loader2 size={15} className="animate-spin" /> : <Github size={15} />}
+                            <ActionButton type="button" onClick={beginOAuth} disabled={connecting || agentLocked} size="sm">
+                                {connecting ? <Loader2 size={13} className="animate-spin" /> : <Github size={13} />}
                                 Connect GitHub
                             </ActionButton>
                         )}
 
                         {walletAddress && ghUser && (
-                            <div className="space-y-3">
-                                <div className="flex items-center gap-3 rounded-2xl bg-background p-3 ring-1 ring-black/5">
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary-soft">
-                                        <Github size={16} className="text-primary" />
+                            <div className="flex items-center justify-between gap-3 rounded-lg bg-background p-2.5">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft">
+                                        <Github size={14} className="text-primary" />
                                     </div>
                                     <div className="min-w-0">
-                                        <div className="truncate text-sm font-medium text-foreground">{ghUser.name || ghUser.login}</div>
-                                        <div className="text-xs text-muted">@{ghUser.login} | {shortWalletAddress}</div>
+                                        <div className="truncate text-[13px] font-medium text-foreground">{ghUser.name || ghUser.login}</div>
+                                        <div className="text-[11px] text-muted">@{ghUser.login}</div>
                                     </div>
                                 </div>
-                                <ActionButton type="button" onClick={() => void disconnect()} disabled={agentLocked} variant="secondary" className="w-full">
-                                    <Unplug size={14} />
-                                    Disconnect GitHub
+                                <ActionButton type="button" onClick={() => void disconnect()} disabled={agentLocked} variant="ghost" size="sm">
+                                    <Unplug size={12} />
+                                    Disconnect
                                 </ActionButton>
                             </div>
                         )}
                     </StepCard>
 
+                    {/* ── Step 2: Select repository ── */}
                     <StepCard
                         step="STEP 2"
                         title="Select repository"
                         state={selectedRepo ? "completed" : walletAddress ? "active" : "idle"}
                         footer="Paste a public repository or pick one from your connected account."
                     >
-                        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_140px]">
+                        <div className="flex gap-2">
                             <input
                                 value={repoUrlInput}
                                 onChange={(event) => setRepoUrlInput(event.target.value)}
                                 placeholder="https://github.com/owner/repo"
                                 disabled={agentLocked}
-                                className="w-full rounded-[20px] bg-background px-4 py-3 text-sm text-foreground ring-1 ring-black/5 focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-50"
+                                className="min-w-0 flex-1 rounded-lg bg-background px-3 py-2 text-[13px] text-foreground placeholder:text-muted focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-50"
                             />
                             <ActionButton
                                 type="button"
                                 onClick={() => void validateRepoUrl()}
                                 disabled={!repoUrlInput.trim() || validatingRepoUrl || agentLocked || !walletAddress}
                                 variant="secondary"
+                                size="sm"
                             >
-                                {validatingRepoUrl ? <Loader2 size={14} className="animate-spin" /> : <FolderGit2 size={14} />}
+                                {validatingRepoUrl ? <Loader2 size={13} className="animate-spin" /> : <FolderGit2 size={13} />}
                                 Validate
                             </ActionButton>
                         </div>
 
-                        <select
-                            value={ghUser ? selectedRepo?.fullName ?? "" : ""}
-                            onChange={(event) => {
-                                const repo = repos.find((entry) => entry.fullName === event.target.value) ?? null
-                                setSelectedRepo(repo)
-                                setRepoUrlInput(repo ? `https://github.com/${repo.fullName}` : "")
-                                setRepoContext("")
-                                setRepoFiles([])
-                                setResult("")
-                                setPrompt("")
-                            }}
-                            disabled={!ghUser || repos.length === 0 || agentLocked}
-                            className="w-full rounded-[20px] bg-background px-4 py-3 text-sm text-foreground ring-1 ring-black/5 focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-50"
-                        >
-                            <option value="">Choose one of your connected repositories</option>
-                            {repos.map((repo) => (
-                                <option key={repo.id} value={repo.fullName}>
-                                    {repo.fullName}
-                                </option>
-                            ))}
-                        </select>
-
-                        <ActionButton
-                            type="button"
-                            onClick={() => void loadRepo()}
-                            disabled={!selectedRepo || indexing || agentLocked || !walletAddress}
-                            className="w-full"
-                        >
-                            {indexing ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                            Index Repository
-                        </ActionButton>
+                        {ghUser && repos.length > 0 && (
+                            <select
+                                value={selectedRepo?.fullName ?? ""}
+                                onChange={(event) => {
+                                    const repo = repos.find((entry) => entry.fullName === event.target.value) ?? null
+                                    setSelectedRepo(repo)
+                                    setRepoUrlInput(repo ? `https://github.com/${repo.fullName}` : "")
+                                    setRepoContext("")
+                                    setRepoFiles([])
+                                    setResult("")
+                                    setPrompt("")
+                                }}
+                                disabled={agentLocked}
+                                className="w-full rounded-lg bg-background px-3 py-2 text-[13px] text-foreground focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-50"
+                            >
+                                <option value="">Choose a connected repository</option>
+                                {repos.map((repo) => (
+                                    <option key={repo.id} value={repo.fullName}>
+                                        {repo.fullName}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
 
                         {selectedRepo && (
-                            <div className="rounded-2xl bg-background p-4 ring-1 ring-black/5">
-                                <div className="text-sm font-medium text-foreground">{selectedRepo.fullName}</div>
-                                {selectedRepo.description && (
-                                    <div className="mt-1 text-sm text-foreground-soft">{selectedRepo.description}</div>
-                                )}
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                    {selectedRepo.language && (
-                                        <span className="rounded-full bg-primary-soft px-2.5 py-1 text-[10px] font-semibold uppercase text-primary">
-                                            {selectedRepo.language}
-                                        </span>
+                            <div className="flex items-center justify-between gap-3 rounded-lg bg-background p-2.5">
+                                <div className="min-w-0">
+                                    <div className="text-[13px] font-medium text-foreground">{selectedRepo.fullName}</div>
+                                    {selectedRepo.description && (
+                                        <div className="mt-0.5 text-[12px] text-foreground-soft line-clamp-1">{selectedRepo.description}</div>
                                     )}
-                                    <span className="rounded-full bg-surface px-2.5 py-1 text-[10px] font-medium text-muted ring-1 ring-black/5">
-                                        Starred {selectedRepo.stars}
-                                    </span>
-                                    <span className="rounded-full bg-surface px-2.5 py-1 text-[10px] font-medium text-muted ring-1 ring-black/5">
-                                        {selectedRepo.defaultBranch}
-                                    </span>
-                                </div>
-                                {repoFiles.length > 0 && (
-                                    <div className="mt-3 text-xs text-emerald-600 dark:text-emerald-400">
-                                        Indexed {repoFiles.length} files
+                                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                        {selectedRepo.language && (
+                                            <span className="rounded-md bg-primary-soft px-2 py-0.5 text-[10px] font-semibold uppercase text-primary">
+                                                {selectedRepo.language}
+                                            </span>
+                                        )}
+                                        <span className="rounded-md bg-surface-elevated px-2 py-0.5 text-[10px] font-medium text-muted">
+                                            ★ {selectedRepo.stars}
+                                        </span>
+                                        <span className="rounded-md bg-surface-elevated px-2 py-0.5 text-[10px] font-medium text-muted">
+                                            {selectedRepo.defaultBranch}
+                                        </span>
+                                        {repoFiles.length > 0 && (
+                                            <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                                                {repoFiles.length} files indexed
+                                            </span>
+                                        )}
                                     </div>
-                                )}
+                                </div>
+                                <ActionButton
+                                    type="button"
+                                    onClick={() => void loadRepo()}
+                                    disabled={indexing || agentLocked || !walletAddress}
+                                    size="sm"
+                                >
+                                    {indexing ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                                    {indexing ? "Indexing…" : repoContext ? "Re-index" : "Index"}
+                                </ActionButton>
                             </div>
+                        )}
+
+                        {!selectedRepo && (
+                            <ActionButton
+                                type="button"
+                                onClick={() => void loadRepo()}
+                                disabled={!selectedRepo || indexing || agentLocked || !walletAddress}
+                                size="sm"
+                            >
+                                {indexing ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                                Index Repository
+                            </ActionButton>
                         )}
                     </StepCard>
 
+                    {/* ── Step 3: Ask the agent ── */}
                     <StepCard
                         step="STEP 3"
                         title="Ask the agent"
                         state={result ? "completed" : isReadyForPrompt ? "active" : "idle"}
                         footer={isReadyForPrompt ? "Ask for review, analysis, or execution." : "Load a repository first."}
                     >
-                        <div className="flex flex-wrap gap-3">
-                            <ActionButton
-                                type="button"
-                                onClick={() => void runFullReview()}
-                                disabled={!isReadyForPrompt || loading || agentLocked}
-                                variant="secondary"
-                            >
-                                <BookOpenText size={14} />
-                                Full Review
-                            </ActionButton>
-                        </div>
+                        {isReadyForPrompt && (
+                            <div className="flex gap-2">
+                                <ActionButton
+                                    type="button"
+                                    onClick={() => void runFullReview()}
+                                    disabled={!isReadyForPrompt || loading || agentLocked}
+                                    variant="secondary"
+                                    size="sm"
+                                >
+                                    <BookOpenText size={13} />
+                                    Full Review
+                                </ActionButton>
+                            </div>
+                        )}
 
                         <PromptBox
                             value={prompt}
                             onChange={setPrompt}
                             disabled={!isReadyForPrompt || loading || agentLocked}
-                            rows={5}
+                            rows={4}
                             placeholder={
                                 isReadyForPrompt
                                     ? "Ask the agent to analyze, review, or execute..."
@@ -643,14 +662,14 @@ export default function GitHubAgent() {
                             }
                         />
 
-                        <div className="flex gap-3">
+                        <div className="flex gap-2">
                             <ActionButton
                                 type="button"
                                 onClick={() => void runPrompt()}
                                 disabled={!prompt.trim() || !isReadyForPrompt || loading || agentLocked}
-                                className="flex-1 sm:flex-none"
+                                size="sm"
                             >
-                                {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                                {loading ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
                                 Run Task
                             </ActionButton>
                             <ActionButton
@@ -661,31 +680,30 @@ export default function GitHubAgent() {
                                     setError(null)
                                 }}
                                 disabled={agentLocked}
-                                variant="secondary"
+                                variant="ghost"
+                                size="sm"
                             >
-                                <RefreshCw size={14} />
+                                <RefreshCw size={12} />
                                 Clear
                             </ActionButton>
                         </div>
                     </StepCard>
 
                     {loading && (
-                        <div className="rounded-2xl bg-background p-4 text-sm text-foreground-soft ring-1 ring-black/5">
-                            <div className="flex items-center gap-2">
-                                <Loader2 size={15} className="animate-spin text-primary" />
-                                Analyzing repository...
-                            </div>
+                        <div className="flex items-center gap-2 rounded-lg bg-background px-3 py-2.5 text-[12px] text-foreground-soft">
+                            <Loader2 size={14} className="animate-spin text-primary" />
+                            Analyzing repository…
                         </div>
                     )}
 
                     {result && (
-                        <div className="rounded-[24px] bg-surface/90 p-5 shadow-[0_12px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/35">
-                            <div className="mb-4 flex items-center justify-between">
+                        <div className="rounded-xl bg-surface/90 p-4">
+                            <div className="mb-3 flex items-center justify-between">
                                 <div>
                                     <div className="eyebrow">Output</div>
-                                    <div className="mt-1 text-sm font-semibold text-foreground">Repository response</div>
+                                    <div className="mt-0.5 text-[13px] font-semibold text-foreground">Repository response</div>
                                 </div>
-                                <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
                                     Ready
                                 </span>
                             </div>
@@ -696,23 +714,24 @@ export default function GitHubAgent() {
                     )}
                 </div>
 
-                <div className="space-y-4 xl:sticky xl:top-4">
-                    <div className="rounded-[24px] bg-background/80 p-4 ring-1 ring-black/5">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Status</div>
-                        <div className="mt-2 text-sm font-semibold text-foreground">
+                {/* ── Sidebar ── */}
+                <div className="space-y-3 xl:sticky xl:top-4">
+                    <div className="rounded-xl bg-background/80 p-3.5">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Status</div>
+                        <div className="mt-1.5 text-[13px] font-semibold text-foreground">
                             {result ? "Response ready" : repoContext ? "Repository indexed" : selectedRepo ? "Repository selected" : "Waiting for setup"}
                         </div>
-                        <p className="mt-2 text-sm text-foreground-soft">Clear steps, same GitHub flow, less noise.</p>
+                        <p className="mt-1.5 text-[12px] text-foreground-soft">Clear steps, same GitHub flow, less noise.</p>
                     </div>
 
                     {repoFiles.length > 0 && (
-                        <details className="overflow-hidden rounded-[24px] bg-surface/90 ring-1 ring-white/35">
-                            <summary className="cursor-pointer px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted select-none" style={{ minHeight: 44, display: "flex", alignItems: "center" }}>
+                        <details className="overflow-hidden rounded-xl bg-surface/90">
+                            <summary className="flex min-h-[36px] cursor-pointer items-center px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted select-none">
                                 Indexed Files ({repoFiles.length})
                             </summary>
-                            <div className="max-h-[300px] space-y-1 overflow-y-auto border-t border-border p-3">
+                            <div className="max-h-[260px] space-y-0.5 overflow-y-auto border-t border-border px-2 py-2">
                                 {repoFiles.map((file) => (
-                                    <div key={file} className="truncate rounded-xl bg-background px-3 py-2 font-mono text-xs text-foreground-soft ring-1 ring-black/5">
+                                    <div key={file} className="truncate rounded-md bg-background px-2.5 py-1.5 font-mono text-[11px] text-foreground-soft">
                                         {file}
                                     </div>
                                 ))}
@@ -721,8 +740,6 @@ export default function GitHubAgent() {
                     )}
                 </div>
             </div>
-
-
         </div>
     )
 }

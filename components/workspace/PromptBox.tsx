@@ -24,7 +24,7 @@ export default function PromptBox({
             rows={rows}
             disabled={disabled}
             placeholder={placeholder}
-            className={`w-full rounded-[22px] bg-background px-4 py-4 text-sm leading-7 text-foreground placeholder:text-muted ring-1 ring-black/5 transition-all duration-200 focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60 ${className}`.trim()}
+            className={`w-full rounded-xl bg-background px-3 py-3 text-[13px] leading-6 text-foreground placeholder:text-muted transition-all duration-150 focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60 ${className}`.trim()}
         />
     )
 }

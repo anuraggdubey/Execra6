@@ -38,7 +38,7 @@ export default function AgentQuickStart({
     const allDone = completedCount === steps.length
 
     return (
-        <section className="rounded-xl bg-surface px-4 py-3 ring-1 ring-black/5">
+        <section className="rounded-xl bg-surface px-4 py-3">
             {/* Top row: description + progress + dismiss */}
             <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
@@ -70,7 +70,7 @@ export default function AgentQuickStart({
                         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${
                             step.complete
                                 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                : "bg-background text-foreground-soft ring-1 ring-black/5"
+                                : "bg-background text-foreground-soft"
                         }`}
                     >
                         {step.complete ? (
@@ -108,14 +108,14 @@ export default function AgentQuickStart({
                         typeof secondaryAction === "string" ? (
                             <a
                                 href={secondaryAction}
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-background px-3 py-1.5 text-[12px] font-medium text-foreground ring-1 ring-black/5 transition-colors hover:bg-surface-elevated"
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-background px-3 py-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-elevated"
                             >
                                 {secondaryLabel}
                             </a>
                         ) : (
                             <button
                                 onClick={secondaryAction}
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-background px-3 py-1.5 text-[12px] font-medium text-foreground ring-1 ring-black/5 transition-colors hover:bg-surface-elevated"
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-background px-3 py-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-elevated"
                             >
                                 {secondaryLabel}
                             </button>

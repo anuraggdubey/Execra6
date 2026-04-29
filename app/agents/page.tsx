@@ -379,7 +379,7 @@ export default function AgentsPage() {
     return (
         <div className="mx-auto w-full max-w-[1400px] overflow-x-hidden px-3 py-3 sm:px-5 sm:py-4 lg:px-6">
             {!walletAddress && (
-                <section className="mb-3 flex items-center justify-between gap-3 rounded-xl bg-surface/80 px-4 py-3 ring-1 ring-black/5 sm:mb-4">
+                <section className="mb-3 flex items-center justify-between gap-3 rounded-xl bg-surface/80 px-4 py-3 sm:mb-4">
                     <span className="text-[13px] text-foreground-soft">Connect a Stellar wallet to unlock agents</span>
                     <ConnectWalletButton className="button-primary !min-h-[32px] !px-3 !py-1 !text-xs" />
                 </section>
@@ -479,7 +479,7 @@ export default function AgentsPage() {
                             secondaryLabel="Open workspace"
                             secondaryAction="#agent-workbench"
                         />
-                        <section className="overflow-hidden rounded-xl bg-surface ring-1 ring-black/5">
+                        <section className="overflow-hidden rounded-xl bg-surface">
                             <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
                                 <h2 className="text-[13px] font-semibold text-foreground">Coding Agent</h2>
                                 <span className="text-[10px] font-medium text-primary">Escrow-backed</span>
@@ -513,7 +513,7 @@ export default function AgentsPage() {
                                             value={codingLanguage}
                                             onChange={(event) => setCodingLanguage(event.target.value)}
                                             disabled={codingLocked}
-                                            className="w-full rounded-[20px] bg-background px-4 py-3 text-sm text-foreground ring-1 ring-black/5 focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
+                                            className="w-full rounded-[20px] bg-background px-4 py-3 text-sm text-foreground focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
                                         >
                                             <option value="html-css-js">HTML / CSS / JS project</option>
                                             <option value="typescript">TypeScript</option>
@@ -528,7 +528,7 @@ export default function AgentsPage() {
                                             onChange={(event) => setCodingRewardXlm(event.target.value)}
                                             inputMode="decimal"
                                             disabled={codingLocked}
-                                            className="w-full rounded-[20px] bg-background px-4 py-3 text-sm text-foreground ring-1 ring-black/5 focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
+                                            className="w-full rounded-[20px] bg-background px-4 py-3 text-sm text-foreground focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
                                         />
                                     </StepCard>
 
@@ -571,7 +571,7 @@ export default function AgentsPage() {
                                 </div>
 
                                 <div className="space-y-4 xl:sticky xl:top-4">
-                                    <div className="rounded-[24px] bg-background/80 p-4 ring-1 ring-black/5">
+                                    <div className="rounded-[24px] bg-background/80 p-4">
                                         <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Status</div>
                                         <div className="mt-2 text-sm font-semibold text-foreground">
                                             {codingState === "running" ? "Generating build output" : codingState === "done" ? "Output ready" : "Ready to run"}
@@ -579,7 +579,7 @@ export default function AgentsPage() {
                                         <p className="mt-2 text-sm text-foreground-soft">Minimal input, clean handoff, same execution flow.</p>
                                     </div>
 
-                                    <div className="space-y-4 rounded-[24px] bg-background/80 p-4 ring-1 ring-black/5">
+                                    <div className="space-y-4 rounded-[24px] bg-background/80 p-4">
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <div className="eyebrow">Output</div>
@@ -600,7 +600,7 @@ export default function AgentsPage() {
 
                                         {codingResult?.mode === "project" && (
                                             <div className="space-y-4">
-                                                <div className="rounded-2xl bg-surface p-4 ring-1 ring-black/5">
+                                                <div className="rounded-2xl bg-surface p-4">
                                                     <div className="text-sm font-semibold text-foreground">{codingResult.projectId}</div>
                                                     <div className="mt-1 text-sm text-foreground-soft">
                                                         Frontend project prepared with HTML, CSS, and JavaScript assets.
@@ -622,7 +622,7 @@ export default function AgentsPage() {
 
                                         {codingResult?.mode === "single-file" && (
                                             <div className="space-y-4">
-                                                <div className="rounded-2xl bg-surface p-4 ring-1 ring-black/5">
+                                                <div className="rounded-2xl bg-surface p-4">
                                                     <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                                                         <FileCode2 size={15} className="text-primary" />
                                                         {codingResult.fileName}
@@ -635,7 +635,7 @@ export default function AgentsPage() {
                                                     <Download size={14} />
                                                     Download Source
                                                 </a>
-                                                <pre className="max-h-[480px] overflow-auto rounded-2xl bg-[#0d1117] p-4 text-xs text-gray-200 ring-1 ring-black/5">
+                                                <pre className="max-h-[480px] overflow-auto rounded-2xl bg-[#0d1117] p-4 text-xs text-gray-200">
                                                     <code>{codingResult.code}</code>
                                                 </pre>
                                             </div>
@@ -661,7 +661,7 @@ export default function AgentsPage() {
                             secondaryLabel="Open workspace"
                             secondaryAction="#agent-workbench"
                         />
-                        <section className="overflow-hidden rounded-xl bg-surface ring-1 ring-black/5">
+                        <section className="overflow-hidden rounded-xl bg-surface">
                             <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
                                 <h2 className="text-[13px] font-semibold text-foreground">Document Agent</h2>
                                 <span className="text-[10px] font-medium text-primary">Specs & datasets</span>
@@ -675,7 +675,7 @@ export default function AgentsPage() {
                                         state={documentFile ? "completed" : "active"}
                                         footer="One file keeps the result focused."
                                     >
-                                        <label className="flex cursor-pointer items-center gap-3 rounded-[22px] bg-background px-4 py-4 ring-1 ring-black/5 transition-all duration-200 hover:ring-primary/25 sm:gap-4 sm:px-5">
+                                        <label className="flex cursor-pointer items-center gap-3 rounded-[22px] bg-background px-4 py-4 transition-all duration-200 hover:ring-primary/25 sm:gap-4 sm:px-5">
                                             <Upload size={18} className="text-primary" />
                                             <div>
                                                 <div className="text-sm font-semibold text-foreground">
@@ -714,7 +714,7 @@ export default function AgentsPage() {
                                             onChange={(event) => setDocumentRewardXlm(event.target.value)}
                                             inputMode="decimal"
                                             disabled={documentLocked}
-                                            className="w-full rounded-[20px] bg-background px-4 py-3 text-sm text-foreground ring-1 ring-black/5 focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
+                                            className="w-full rounded-[20px] bg-background px-4 py-3 text-sm text-foreground focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
                                         />
                                     </StepCard>
 
@@ -758,7 +758,7 @@ export default function AgentsPage() {
                                 </div>
 
                                 <div className="space-y-4 xl:sticky xl:top-4">
-                                    <div className="rounded-[24px] bg-background/80 p-4 ring-1 ring-black/5">
+                                    <div className="rounded-[24px] bg-background/80 p-4">
                                         <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Status</div>
                                         <div className="mt-2 text-sm font-semibold text-foreground">
                                             {documentState === "running" ? "Analyzing document" : documentState === "done" ? "Analysis ready" : "Ready to analyze"}
@@ -766,7 +766,7 @@ export default function AgentsPage() {
                                         <p className="mt-2 text-sm text-foreground-soft">Focused analysis with less UI noise.</p>
                                     </div>
 
-                                    <div className="space-y-4 rounded-[24px] bg-background/80 p-4 ring-1 ring-black/5">
+                                    <div className="space-y-4 rounded-[24px] bg-background/80 p-4">
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <div className="eyebrow">Analysis</div>
@@ -787,7 +787,7 @@ export default function AgentsPage() {
 
                                         {documentResult && (
                                             <div className="space-y-4">
-                                                <div className="rounded-2xl bg-surface p-4 text-sm ring-1 ring-black/5">
+                                                <div className="rounded-2xl bg-surface p-4 text-sm">
                                                     <div className="font-semibold text-foreground">{documentResult.fileName}</div>
                                                     <div className="mt-1 text-foreground-soft">
                                                         Detected type: <span className="uppercase">{documentResult.fileType}</span>
@@ -836,7 +836,7 @@ function StatusPill({ state }: { state: RunState }) {
 
 function LoadingCopy({ text }: { text: string }) {
     return (
-        <div className="rounded-2xl bg-surface p-4 ring-1 ring-black/5">
+        <div className="rounded-2xl bg-surface p-4">
             <div className="flex items-center gap-2 text-sm text-foreground-soft">
                 <Loader2 size={15} className="animate-spin text-primary" />
                 {text}
@@ -855,7 +855,7 @@ function EmptyState({
     body: string
 }) {
     return (
-        <div className="rounded-2xl bg-surface px-4 py-10 text-center ring-1 ring-black/5">
+        <div className="rounded-2xl bg-surface px-4 py-10 text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary">
                 <Icon size={20} />
             </div>
@@ -891,7 +891,7 @@ function CodePreviewTabs({ files }: { files: GeneratedFiles }) {
     const activeFile = files[selectedTab] ?? ""
 
     return (
-        <div className="overflow-hidden rounded-2xl ring-1 ring-black/5">
+        <div className="overflow-hidden rounded-2xl">
             <div className="flex flex-wrap bg-surface">
                 {fileNames.map((fileName) => (
                     <button

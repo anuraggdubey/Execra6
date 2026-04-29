@@ -20,7 +20,7 @@ export default function AgentSidebar({
     onSelect,
 }: AgentSidebarProps) {
     return (
-        <aside className="rounded-2xl bg-surface/80 p-1.5 ring-1 ring-black/5 sm:sticky sm:top-4 sm:self-start sm:p-2">
+        <aside className="rounded-2xl bg-surface/80 p-1.5 sm:sticky sm:top-4 sm:self-start sm:p-2">
             <div className="mb-1.5 hidden px-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted sm:block">
                 Agents
             </div>
@@ -36,7 +36,7 @@ export default function AgentSidebar({
                             className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-2 text-[11px] font-semibold transition-all duration-200 ${
                                 active
                                     ? "bg-primary text-white shadow-sm"
-                                    : "bg-background text-foreground-soft ring-1 ring-black/5"
+                                    : "bg-background text-foreground-soft"
                             }`}
                         >
                             <Icon size={13} />
@@ -62,7 +62,7 @@ export default function AgentSidebar({
                             }`}
                         >
                             <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors duration-150 ${
-                                active ? "bg-primary text-white" : "bg-background text-primary ring-1 ring-black/5"
+                                active ? "bg-primary text-white" : "bg-background text-primary"
                             }`}>
                                 <Icon size={14} />
                             </div>

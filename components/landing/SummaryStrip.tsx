@@ -40,9 +40,9 @@ export default function SummaryStrip({
                 return (
                     <div
                         key={item.label}
-                        className="flex min-h-[72px] flex-1 items-center gap-3 rounded-[24px] bg-surface/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.06)] ring-1 ring-white/35 backdrop-blur-[8px]"
+                        className="flex min-h-[72px] flex-1 items-center gap-3 rounded-xl bg-surface px-4 py-3 ring-1 ring-border"
                     >
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary">
                             <Icon size={18} />
                         </div>
                         <div className="min-w-0">

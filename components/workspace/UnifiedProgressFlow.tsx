@@ -51,14 +51,14 @@ export default function UnifiedProgressFlow({
                     : "Continue setup"
 
     return (
-        <section className="rounded-[26px] bg-surface/78 px-4 py-4 shadow-[0_12px_32px_rgba(15,23,42,0.06)] ring-1 ring-white/35 backdrop-blur-[8px] sm:px-5 sm:py-5">
+        <section className="rounded-[26px] bg-surface/78 px-4 py-4 sm:px-5 sm:py-5">
             <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between gap-3">
                     <div>
                         <div className="text-sm font-semibold text-foreground">Setup Progress</div>
                         <p className="mt-1 text-xs text-foreground-soft">Complete setup to run your first agent task.</p>
                     </div>
-                    <div className="rounded-full bg-background px-3 py-1.5 text-[11px] font-semibold text-foreground ring-1 ring-black/5">
+                    <div className="rounded-full bg-background px-3 py-1.5 text-[11px] font-semibold text-foreground">
                         {completedCount}/{steps.length} Complete
                     </div>
                 </div>
@@ -76,7 +76,7 @@ export default function UnifiedProgressFlow({
                             <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium ${
                                 step.complete
                                     ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                    : "bg-background text-foreground-soft ring-1 ring-black/5"
+                                    : "bg-background text-foreground-soft"
                             }`}>
                                 {step.complete ? <CheckCircle2 size={13} /> : <span className="h-2 w-2 rounded-full bg-current/60" />}
                                 {step.label}

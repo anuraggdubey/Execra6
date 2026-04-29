@@ -48,7 +48,7 @@ export default function CollapsiblePanel({
     ]
 
     return (
-        <section className="rounded-[28px] bg-surface/78 shadow-[0_14px_40px_rgba(15,23,42,0.08)] ring-1 ring-white/35 backdrop-blur-[8px]">
+        <section className="rounded-xl bg-surface ring-1 ring-border">
             <button
                 type="button"
                 onClick={() => setExpanded((value) => !value)}
@@ -73,7 +73,7 @@ export default function CollapsiblePanel({
             >
                 <div className="grid gap-4 border-t border-border/70 pt-5 xl:grid-cols-[0.95fr_1.05fr]">
                     <div className="space-y-4">
-                        <div className="rounded-2xl bg-background/80 p-4 ring-1 ring-black/5">
+                        <div className="rounded-xl bg-surface-elevated p-4 ring-1 ring-border">
                             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                                 <Sparkles size={16} className="text-primary" />
                                 Quick Start
@@ -85,7 +85,7 @@ export default function CollapsiblePanel({
 
                         <div className="space-y-3">
                             {steps.map((step, index) => (
-                                <div key={step.label} className="rounded-2xl bg-background/80 p-4 ring-1 ring-black/5">
+                                <div key={step.label} className="rounded-xl bg-surface-elevated p-4 ring-1 ring-border">
                                     <div className="flex items-center justify-between gap-3">
                                         <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                                             {step.complete ? (
@@ -103,14 +103,14 @@ export default function CollapsiblePanel({
                         </div>
                     </div>
 
-                    <div className="rounded-2xl bg-background/80 p-4 ring-1 ring-black/5">
+                    <div className="rounded-xl bg-surface-elevated p-4 ring-1 ring-border">
                         <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                             <FolderGit2 size={16} className="text-primary" />
                             Agent Roles
                         </div>
                         <div className="mt-4 grid gap-3 sm:grid-cols-2">
                             {agents.map((agent) => (
-                                <div key={agent.label} className="rounded-2xl bg-surface px-4 py-3 ring-1 ring-black/5">
+                                <div key={agent.label} className="rounded-xl bg-surface px-4 py-3 ring-1 ring-border">
                                     <div className="text-sm font-semibold text-foreground">{agent.label}</div>
                                     <p className="mt-1 text-sm leading-6 text-foreground-soft">{agent.description}</p>
                                 </div>

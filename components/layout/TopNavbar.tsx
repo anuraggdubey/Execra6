@@ -23,7 +23,7 @@ export default function TopNavbar() {
 
     return (
         <header className="sticky top-0 z-30 shrink-0 px-3 pt-3 sm:px-5 sm:pt-4">
-            <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 rounded-xl bg-surface/90 px-4 py-2.5 ring-1 ring-black/5 backdrop-blur-md sm:px-5">
+            <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 rounded-xl bg-surface/90 px-4 py-2.5 ring-1 ring-border backdrop-blur-md sm:px-5">
                 <div className="flex min-w-0 items-center gap-3">
                     <BrandLogo href="/" priority />
                 </div>
@@ -48,7 +48,7 @@ export default function TopNavbar() {
                     <ThemeToggle />
 
                     {mounted && walletAddress && (
-                        <div className="hidden items-center gap-1.5 rounded-lg bg-background/80 px-2.5 py-1.5 text-[11px] text-foreground-soft ring-1 ring-black/5 sm:inline-flex">
+                        <div className="hidden items-center gap-1.5 rounded-lg bg-background/80 px-2.5 py-1.5 text-[11px] text-foreground-soft ring-1 ring-border sm:inline-flex">
                             <Wallet size={12} className="text-primary" />
                             <span>{shortWalletAddress}</span>
                             <span className="rounded-full bg-primary-soft px-1.5 py-0.5 text-[10px] font-semibold text-primary">
@@ -83,7 +83,7 @@ export default function TopNavbar() {
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium ring-1 ring-black/5 transition-colors duration-150 ${
+                            className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium ring-1 ring-border transition-colors duration-150 ${
                                 pathname === item.href
                                     ? "bg-primary-soft text-foreground"
                                     : "bg-surface/80 text-foreground-soft hover:text-foreground"

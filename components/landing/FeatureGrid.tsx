@@ -39,7 +39,7 @@ export default function FeatureGrid() {
                     <Link
                         key={feature.title}
                         href={feature.href}
-                        className="group rounded-[28px] bg-surface/82 p-5 shadow-[0_14px_40px_rgba(15,23,42,0.08)] ring-1 ring-white/40 backdrop-blur-[8px] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_56px_rgba(15,23,42,0.12)]"
+                        className="group rounded-xl bg-surface p-5 ring-1 ring-border transition-all duration-200 hover:-translate-y-0.5 hover:ring-primary/20"
                     >
                         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary transition-transform duration-300 group-hover:scale-105">
                             <Icon size={20} />
