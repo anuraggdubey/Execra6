@@ -46,9 +46,10 @@ export default function Home() {
     const hasGitHubConnection = Boolean(getGitHubSession(walletAddress)?.accessToken)
     const hasCompletedTask = agents.some((agent) => agent.tasksCompleted > 0)
     const lastActivity = activities[0]?.message ?? null
+    const tasksCompleted = agents.reduce((sum, agent) => sum + agent.tasksCompleted, 0)
 
     return (
-        <div className="min-h-screen min-h-dvh bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.12),transparent_26%),radial-gradient(circle_at_bottom_right,rgba(15,118,110,0.10),transparent_24%),var(--background)] pb-16">
+        <div className="min-h-screen min-h-dvh bg-background pb-16">
             <LandingNavbar
                 mounted={mounted}
                 walletAddress={walletAddress}
@@ -56,20 +57,33 @@ export default function Home() {
                 walletBalance={walletBalance}
             />
 
-            <main className="px-4 pt-4 sm:px-6 sm:pt-6">
-                <div className="mx-auto grid w-full max-w-7xl gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-                    <div className="space-y-6">
-                        <HeroSection mounted={mounted} walletAddress={walletAddress} />
+            <main className="px-4 pb-10 pt-8 sm:px-6 sm:pt-10">
+                <div className="mx-auto w-full max-w-[1440px]">
+                    <section className="grid border border-border bg-background xl:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)]">
+                        <div className="border-b border-border px-6 py-8 xl:border-b-0 xl:border-r xl:px-10 xl:py-10">
+                            <HeroSection mounted={mounted} walletAddress={walletAddress} />
+                        </div>
+                        <div className="min-h-full">
+                            <CurrentStatusPanel
+                                walletAddress={walletAddress}
+                                shortWalletAddress={shortWalletAddress}
+                                hasGitHubConnection={hasGitHubConnection}
+                                lastActivity={lastActivity}
+                            />
+                        </div>
+                    </section>
 
-                        <SummaryStrip
-                            walletAddress={walletAddress}
-                            shortWalletAddress={shortWalletAddress}
-                            walletBalance={walletBalance}
-                            agentCount={agents.length}
-                        />
+                    <SummaryStrip
+                        walletAddress={walletAddress}
+                        shortWalletAddress={shortWalletAddress}
+                        walletBalance={walletBalance}
+                        agentCount={agents.length}
+                        tasksCompleted={tasksCompleted}
+                        eventsCount={activities.length}
+                    />
 
+                    <div className="mt-8 space-y-8">
                         <FeatureGrid />
-
                         <CollapsiblePanel
                             walletConnected={Boolean(walletAddress)}
                             hasCompletedTask={hasCompletedTask}
@@ -77,13 +91,6 @@ export default function Home() {
                             agents={AGENT_INFO}
                         />
                     </div>
-
-                    <CurrentStatusPanel
-                        walletAddress={walletAddress}
-                        shortWalletAddress={shortWalletAddress}
-                        hasGitHubConnection={hasGitHubConnection}
-                        lastActivity={lastActivity}
-                    />
                 </div>
             </main>
         </div>

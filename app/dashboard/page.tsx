@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Activity, CheckCircle2, Coins, Loader2, ShieldCheck, Sparkles, Users } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { useAgentContext } from "@/lib/AgentContext"
 import { useWalletContext } from "@/lib/WalletContext"
 import type { TaskRecord } from "@/types/tasks"
+import { StatusDot } from "@/components/ui/ExecraIcons"
 
 type PlatformStatus = {
     llm: {
@@ -92,61 +93,42 @@ export default function DashboardPage() {
     )
 
     return (
-        <div className="mx-auto max-w-5xl space-y-4">
-            {/* Header */}
-            <div className="flex items-center justify-between">
+        <div className="mx-auto max-w-[1440px] space-y-8 px-4 pt-10 sm:px-6">
+            <div className="flex items-start justify-between border-b border-border pb-6">
                 <div>
-                    <h1 className="text-lg font-semibold tracking-tight text-foreground">Dashboard</h1>
-                    <p className="mt-0.5 text-[13px] text-foreground-soft">
+                    <div className="font-heading text-[11px] uppercase tracking-[0.1em] text-muted">Dashboard</div>
+                    <div className="mt-3 font-heading text-[13px] tracking-[0.02em] text-foreground-soft">
                         {walletAddress ? `${shortWalletAddress} · ${walletBalance ?? "0"} XLM` : "Connect wallet to see your data"}
-                    </p>
+                    </div>
                 </div>
                 {loading && <Loader2 size={16} className="animate-spin text-primary" />}
             </div>
 
-            {/* Metric cards */}
             <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-                <MetricCard icon={<Sparkles size={15} />} label="Agents" value={agents.length.toString()} tone="text-primary" />
-                <MetricCard icon={<Users size={15} />} label="Users" value={userCount.toString()} tone="text-violet-500" />
-                <MetricCard icon={<CheckCircle2 size={15} />} label="Completed" value={totalCompletedTasks.toString()} tone="text-emerald-500" />
-                <MetricCard icon={<Coins size={15} />} label="Earnings" value={`${totalAgentEarnings}`} tone="text-amber-500" />
-                <MetricCard icon={<ShieldCheck size={15} />} label="Sponsored" value={walletAddress ? sponsoredWalletTasks.toString() : "0"} tone="text-sky-500" />
+                <MetricCard label="Agents" value={agents.length.toString()} tone="var(--ex-accent)" />
+                <MetricCard label="Users" value={userCount.toString()} tone="var(--ex-ink-2)" />
+                <MetricCard label="Completed" value={totalCompletedTasks.toString()} tone="var(--ex-success)" />
+                <MetricCard label="Earnings" value={`◈ ${totalAgentEarnings}`} tone="var(--ex-xlm)" />
+                <MetricCard label="Sponsored" value={walletAddress ? sponsoredWalletTasks.toString() : "0"} tone="var(--ex-chain)" />
             </section>
 
-            {/* Platform status */}
-            <section className="grid gap-3 xl:grid-cols-2">
-                <div className="rounded-xl border border-border bg-surface p-4">
-                    <div className="text-[13px] font-semibold text-foreground">Platform Status</div>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                        <StatusCard
-                            label="LLM"
-                            value={platformStatus?.llm.configured ? platformStatus.llm.model : "Not configured"}
-                            status={platformStatus?.llm.available ? "Healthy" : "Attention"}
-                        />
-                        <StatusCard
-                            label="GitHub"
-                            value={platformStatus?.tools.github.configured ? "Configured" : "Missing"}
-                            status={platformStatus?.tools.github.configured ? "Ready" : "Attention"}
-                        />
-                        <StatusCard
-                            label="Auth"
-                            value={platformStatus?.auth.mode ?? "wallet"}
-                            status={isHydrated ? "Live" : "Loading"}
-                        />
-                        <StatusCard
-                            label="Events"
-                            value={activities.length.toString()}
-                            status={activities.length > 0 ? "Active" : "Idle"}
-                        />
+            <section className="grid gap-4 xl:grid-cols-2">
+                <div className="rounded-[6px] border border-border bg-surface px-6 py-5">
+                    <SectionHeader title="Platform Status" />
+                    <div className="mt-4">
+                        <StatusRow label="LLM" value={platformStatus?.llm.configured ? platformStatus.llm.model : "Not configured"} tone={platformStatus?.llm.available ? "success" : "warning"} />
+                        <StatusRow label="GITHUB" value={platformStatus?.tools.github.configured ? "Configured" : "Missing"} tone={platformStatus?.tools.github.configured ? "success" : "warning"} />
+                        <StatusRow label="AUTH" value={platformStatus?.auth.mode ?? "wallet"} tone={isHydrated ? "success" : "warning"} />
+                        <StatusRow label="EVENTS" value={activities.length.toString()} tone={activities.length > 0 ? "success" : "warning"} />
                     </div>
                 </div>
 
-                <div className="rounded-xl border border-border bg-surface p-4">
-                    <div className="text-[13px] font-semibold text-foreground">Fee Sponsorship</div>
-                    <p className="mt-1 text-[12px] text-foreground-soft">
+                <div className="rounded-[6px] border border-border bg-surface px-6 py-5">
+                    <SectionHeader title="Fee Sponsorship" />
+                    <p className="mt-4 text-[13px] text-foreground-soft">
                         Enable sponsored fees in Settings, then run any agent task.
                     </p>
-                    <div className="mt-3 grid grid-cols-3 gap-2">
+                    <div className="mt-4 grid grid-cols-3 gap-3">
                         <MiniStat label="Users" value={userCount.toString()} />
                         <MiniStat label="Sponsored" value={walletAddress ? sponsoredWalletTasks.toString() : "0"} />
                         <MiniStat label="Wallet Tasks" value={walletAddress ? walletTasks.length.toString() : "0"} />
@@ -154,8 +136,7 @@ export default function DashboardPage() {
                 </div>
             </section>
 
-            {/* Task tables */}
-            <section className="grid gap-3 xl:grid-cols-2">
+            <section className="grid gap-4 xl:grid-cols-2">
                 <TaskTable title="Recent Tasks" tasks={recentTasks} />
                 <TaskTable title="Wallet Tasks" tasks={walletTasks} />
             </section>
@@ -163,50 +144,61 @@ export default function DashboardPage() {
     )
 }
 
-function MetricCard({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: string; tone: string }) {
+function MetricCard({ label, value, tone }: { label: string; value: string; tone: string }) {
     return (
-        <div className="rounded-xl border border-border bg-surface p-3">
-            <div className={`flex items-center gap-1.5 text-[11px] font-medium ${tone}`}>{icon}{label}</div>
-            <div className="mt-2 text-xl font-semibold tracking-tight text-foreground">{value}</div>
+        <div className="rounded-[6px] border border-border bg-surface p-4" style={{ borderLeftWidth: 2, borderLeftColor: tone }}>
+            <div className="font-heading text-[10px] uppercase tracking-[0.08em] text-muted">{label}</div>
+            <div className="mt-3 font-heading text-[28px] tracking-[-0.01em]" style={{ color: tone }}>
+                {value}
+            </div>
         </div>
     )
 }
 
-function StatusCard({ label, value, status }: { label: string; value: string; status: string }) {
+function SectionHeader({ title }: { title: string }) {
     return (
-        <div className="rounded-lg border border-border bg-background px-3 py-2.5">
-            <div className="text-[10px] font-semibold uppercase tracking-widest text-muted">{label}</div>
-            <div className="mt-1 text-[13px] font-medium text-foreground">{value}</div>
-            <div className="mt-0.5 text-[11px] text-foreground-soft">{status}</div>
+        <>
+            <div className="font-heading text-[11px] uppercase tracking-[0.08em] text-muted">{title}</div>
+            <div className="mt-3 h-px w-full bg-border" />
+        </>
+    )
+}
+
+function StatusRow({ label, value, tone }: { label: string; value: string; tone: "success" | "warning" | "danger" }) {
+    return (
+        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 border-b border-border py-3 last:border-b-0">
+            <div className="font-heading text-[11px] tracking-[0.02em] text-muted">{label}</div>
+            <div />
+            <div className="flex items-center gap-2">
+                <StatusDot tone={tone} />
+                <span className="font-heading text-[12px] tracking-[0.02em] text-foreground">{value}</span>
+            </div>
         </div>
     )
 }
 
 function MiniStat({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-lg bg-background px-3 py-2 text-center">
-            <div className="text-[10px] font-medium uppercase tracking-wider text-muted">{label}</div>
-            <div className="mt-1 text-base font-semibold text-foreground">{value}</div>
+        <div className="border border-border bg-[color:var(--ex-surface-2)] px-3 py-3 text-center">
+            <div className="font-heading text-[10px] uppercase tracking-[0.08em] text-muted">{label}</div>
+            <div className="mt-2 font-heading text-[18px] text-foreground">{value}</div>
         </div>
     )
 }
 
 function TaskTable({ title, tasks }: { title: string; tasks: TaskRecord[] }) {
     return (
-        <div className="rounded-xl border border-border bg-surface p-4">
-            <div className="flex items-center gap-1.5 text-[13px] font-semibold text-foreground">
-                <Activity size={14} className="text-primary" />
-                {title}
-            </div>
+        <div className="rounded-[6px] border border-border bg-surface px-6 py-5">
+            <SectionHeader title={title} />
 
             {tasks.length === 0 ? (
-                <div className="mt-3 rounded-lg border border-dashed border-border bg-background px-3 py-6 text-center text-[13px] text-foreground-soft">
+                <div className="mt-4 border border-border bg-[color:var(--ex-surface-2)] px-3 py-6 text-center text-[13px] text-foreground-soft">
                     No tasks yet
                 </div>
             ) : (
-                <div className="mt-3 overflow-hidden rounded-lg border border-border">
+                <div className="mt-4 overflow-hidden border border-border">
                     <table className="w-full text-left text-[13px]">
-                        <thead className="bg-background text-[10px] uppercase tracking-[0.08em] text-muted">
+                        <thead className="bg-[color:var(--ex-surface-2)] font-heading text-[10px] uppercase tracking-[0.08em] text-muted">
                             <tr>
                                 <th className="px-3 py-2">Agent</th>
                                 <th className="px-3 py-2">Status</th>
@@ -216,10 +208,12 @@ function TaskTable({ title, tasks }: { title: string; tasks: TaskRecord[] }) {
                         <tbody>
                             {tasks.map((task) => (
                                 <tr key={task.id} className="border-t border-border">
-                                    <td className="px-3 py-2 capitalize text-foreground">{task.agent_type}</td>
-                                    <td className="px-3 py-2 text-foreground-soft">{task.on_chain_status}</td>
-                                    <td className="px-3 py-2 text-foreground-soft">
-                                        {task.feature_config?.feeMode === "sponsored" ? "Sponsored" : "User paid"}
+                                    <td className="px-3 py-3 font-heading capitalize text-foreground">{task.agent_type}</td>
+                                    <td className="px-3 py-3">
+                                        <ChainStatusBadge status={task.on_chain_status} />
+                                    </td>
+                                    <td className="px-3 py-3 font-sans text-foreground-soft">
+                                        {task.feature_config?.feeMode === "sponsored" ? "Sponsored" : "User Paid"}
                                     </td>
                                 </tr>
                             ))}
@@ -228,5 +222,22 @@ function TaskTable({ title, tasks }: { title: string; tasks: TaskRecord[] }) {
                 </div>
             )}
         </div>
+    )
+}
+
+function ChainStatusBadge({ status }: { status: string }) {
+    const styles =
+        status === "completed"
+            ? "border-[color:var(--ex-success)] bg-[color:var(--ex-success-bg)] text-[color:var(--ex-success)]"
+            : status === "pending"
+                ? "border-[color:var(--ex-warning)] bg-[color:var(--ex-warning-bg)] text-[color:var(--ex-warning)]"
+                : status === "failed" || status === "cancelled"
+                    ? "border-[color:var(--ex-danger)] bg-[color:var(--ex-danger-bg)] text-[color:var(--ex-danger)]"
+                    : "border-border bg-[color:var(--ex-surface-2)] text-muted"
+
+    return (
+        <span className={`inline-flex rounded-[3px] border px-1.5 py-0.5 font-heading text-[10px] uppercase tracking-[0.06em] ${styles}`}>
+            {status}
+        </span>
     )
 }

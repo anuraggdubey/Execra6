@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Copy, RefreshCw, Save, Wallet } from "lucide-react"
 import { useHasMounted } from "@/lib/useHasMounted"
 import ConnectWalletButton from "@/components/wallet/ConnectWalletButton"
 import { useWalletContext } from "@/lib/WalletContext"
@@ -40,142 +39,130 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="mx-auto max-w-4xl space-y-4 px-1 sm:px-0">
+        <div className="mx-auto max-w-[680px] space-y-4 px-6 py-10">
             <div>
-                <h1 className="text-2xl font-semibold tracking-tight text-foreground">Settings</h1>
-                <p className="text-sm text-foreground-soft">Wallet identity and sponsored Soroban transaction settings</p>
+                <div className="font-heading text-[11px] uppercase tracking-[0.1em] text-muted">Settings</div>
+                <p className="mt-2 text-[14px] text-foreground-soft">Wallet identity and Soroban transaction defaults.</p>
             </div>
 
-            <div className="panel overflow-hidden rounded-2xl p-4 sm:p-5">
-                {!mounted ? (
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <div className="skeleton h-10 w-10 rounded-lg" />
-                            <div className="min-w-0 space-y-1.5">
-                                <div className="skeleton h-4 w-28" />
-                                <div className="skeleton h-3 w-40" />
-                            </div>
-                        </div>
-                        <div className="skeleton h-10 w-full rounded-lg" />
-                    </div>
-                ) : walletAddress ? (
-                    <div className="space-y-4">
-                        <div className="flex items-start gap-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
-                                <Wallet size={20} />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <div className="text-base font-semibold text-foreground">Connected Wallet</div>
-                                <div className="mt-1 text-sm text-foreground-soft">Stellar testnet identity for this workspace</div>
+            {!mounted ? (
+                <div className="space-y-4 border border-border bg-surface p-6">
+                    <div className="skeleton h-6 w-32" />
+                    <div className="skeleton h-10 w-full" />
+                </div>
+            ) : walletAddress ? (
+                <>
+                    <section className="rounded-[6px] border border-border bg-surface p-6">
+                        <SectionTitle title="Connected Wallet" />
+
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <div className="font-heading text-[10px] uppercase tracking-[0.1em] text-muted">Wallet Address</div>
+                                <div className="mt-2 break-all rounded-[4px] border border-border bg-[color:var(--ex-surface-2)] px-3 py-3 font-heading text-[12px] text-foreground">
+                                    {walletAddress}
+                                </div>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => void handleCopy()}
-                                className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground-soft transition-colors hover:bg-surface-elevated"
+                                className="font-heading text-[11px] tracking-[0.02em] text-[color:var(--ex-accent)] hover:underline"
                                 aria-label="Copy wallet address"
                             >
-                                {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
                                 {copied ? "Copied" : "Copy"}
                             </button>
                         </div>
 
-                        <div className="grid gap-3">
-                            <div className="rounded-xl border border-border bg-background p-3 sm:p-4">
-                                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Wallet Address</div>
-                                <div className="mt-2 overflow-hidden text-ellipsis break-all font-mono text-sm leading-6 text-foreground">
-                                    {walletAddress}
-                                </div>
-                            </div>
-
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                <div className="min-w-0 rounded-xl border border-border bg-background p-3 sm:p-4">
-                                    <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Provider</div>
-                                    <div className="mt-2 truncate text-sm font-medium capitalize text-foreground">
-                                        {walletProviderId ?? "Unknown"}
-                                    </div>
-                                </div>
-
-                                <div className="min-w-0 rounded-xl border border-border bg-background p-3 sm:p-4">
-                                    <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Balance</div>
-                                    <div className="mt-2 truncate text-sm font-medium text-foreground">
-                                        {(walletBalance ?? "0.0000000")} XLM
-                                    </div>
-                                    <div className="mt-1 text-xs text-foreground-soft">Stellar Testnet</div>
-                                </div>
-                            </div>
+                        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                            <Field label="Provider" value={walletProviderId ?? "Unknown"} />
+                            <Field label="Balance" value={`${walletBalance ?? "0.0000000"} XLM`} />
                         </div>
+                    </section>
 
-                        <div className="rounded-2xl border border-border bg-background p-4 sm:p-5">
-                            <div className="flex items-start justify-between gap-4">
-                                <div>
-                                    <div className="text-base font-semibold text-foreground">Fee Sponsorship</div>
-                                    <p className="mt-1 text-sm text-foreground-soft">
-                                        These defaults are applied automatically to new Soroban escrow tasks across the workspace.
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={saveConfig}
-                                    className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-elevated"
+                    <section className="rounded-[6px] border border-border bg-surface p-6">
+                        <SectionTitle title="Fee Sponsorship" />
+
+                        <div className="grid gap-4">
+                            <label className="space-y-2 text-sm">
+                                <span className="font-heading text-[10px] uppercase tracking-[0.1em] text-muted">Fee Mode</span>
+                                <select
+                                    value={featureConfig.feeMode}
+                                    onChange={(event) => setFeatureConfig((current) => ({ ...current, feeMode: event.target.value as TaskFeatureConfig["feeMode"] }))}
+                                    className="w-full rounded-[4px] border border-border bg-background px-3 py-2.5 font-heading text-[13px] text-foreground"
                                 >
-                                    <Save size={14} />
+                                    <option value="user">User Paid</option>
+                                    <option value="sponsored">Sponsored Fee Bump</option>
+                                </select>
+                            </label>
+
+                            <label className="space-y-2 text-sm">
+                                <span className="font-heading text-[10px] uppercase tracking-[0.1em] text-muted">Sponsor Address</span>
+                                <input
+                                    value={featureConfig.sponsorAddress ?? ""}
+                                    onChange={(event) => setFeatureConfig((current) => ({ ...current, sponsorAddress: event.target.value.trim().toUpperCase() || null }))}
+                                    placeholder="Public sponsor wallet address for UI and confirmation"
+                                    className="w-full rounded-[4px] border border-border bg-background px-3 py-2.5 font-heading text-[13px] text-foreground placeholder:text-muted focus:border-[color:var(--ex-accent)] focus:shadow-[0_0_0_3px_rgba(37,99,235,0.1)]"
+                                />
+                            </label>
+
+                            <div>
+                                <button onClick={saveConfig} className="button-primary">
                                     Save
                                 </button>
                             </div>
-
-                            <div className="mt-4 grid gap-4 md:grid-cols-2">
-                                <label className="space-y-2 text-sm">
-                                    <span className="font-medium text-foreground">Fee Mode</span>
-                                    <select
-                                        value={featureConfig.feeMode}
-                                        onChange={(event) => setFeatureConfig((current) => ({ ...current, feeMode: event.target.value as TaskFeatureConfig["feeMode"] }))}
-                                        className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground"
-                                    >
-                                        <option value="user">User Paid</option>
-                                        <option value="sponsored">Sponsored Fee Bump</option>
-                                    </select>
-                                </label>
-
-                                <label className="space-y-2 text-sm md:col-span-2">
-                                    <span className="font-medium text-foreground">Sponsor Address</span>
-                                    <input
-                                        value={featureConfig.sponsorAddress ?? ""}
-                                        onChange={(event) => setFeatureConfig((current) => ({ ...current, sponsorAddress: event.target.value.trim().toUpperCase() || null }))}
-                                        placeholder="Public sponsor wallet address for UI and confirmation"
-                                        className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground"
-                                    />
-                                </label>
-                            </div>
-
-                            {saveMessage && (
-                                <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400">
-                                    {saveMessage}
-                                </div>
-                            )}
                         </div>
 
+                        {saveMessage && (
+                            <div className="mt-4 border border-[color:var(--ex-success)] bg-[color:var(--ex-success-bg)] px-4 py-3 text-sm text-[color:var(--ex-success)]">
+                                {saveMessage}
+                            </div>
+                        )}
+                    </section>
+
+                    <div className="space-y-3">
                         <button
                             onClick={() => void refreshBalance()}
-                            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-elevated"
+                            className="inline-flex min-h-[42px] w-full items-center justify-center rounded-[4px] border border-border bg-transparent px-4 py-3 font-heading text-[12px] tracking-[0.04em] text-foreground-soft transition-colors duration-150 hover:border-[color:var(--ex-border-2)]"
                         >
-                            <RefreshCw size={14} />
                             Refresh Balance
                         </button>
 
                         <button
                             onClick={() => void disconnectWallet()}
-                            className="inline-flex w-full items-center justify-center rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-elevated"
+                            className="inline-flex min-h-[42px] w-full items-center justify-center rounded-[4px] border border-[color:var(--ex-danger)] bg-transparent px-4 py-3 font-heading text-[12px] tracking-[0.04em] text-[color:var(--ex-danger)] transition-colors duration-150 hover:bg-[color:var(--ex-danger-bg)]"
                         >
                             Disconnect Wallet
                         </button>
                     </div>
-                ) : (
-                    <div className="space-y-3 rounded-xl border border-border bg-background p-4">
-                        <p className="text-sm text-foreground-soft">
-                            No wallet connected. Connect a Stellar testnet wallet to enable agent actions.
-                        </p>
+                </>
+            ) : (
+                <section className="rounded-[6px] border border-border bg-surface p-6">
+                    <p className="text-sm text-foreground-soft">
+                        No wallet connected. Connect a Stellar testnet wallet to enable agent actions.
+                    </p>
+                    <div className="mt-4">
                         <ConnectWalletButton className="button-primary w-full" />
                     </div>
-                )}
+                </section>
+            )}
+        </div>
+    )
+}
+
+function SectionTitle({ title }: { title: string }) {
+    return (
+        <>
+            <div className="font-heading text-[12px] tracking-[0.06em] text-foreground">{title}</div>
+            <div className="my-5 h-px w-full bg-border" />
+        </>
+    )
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+    return (
+        <div>
+            <div className="font-heading text-[10px] uppercase tracking-[0.1em] text-muted">{label}</div>
+            <div className="mt-2 rounded-[4px] border border-border bg-[color:var(--ex-surface-2)] px-3 py-3 font-heading text-[12px] text-foreground">
+                {value}
             </div>
         </div>
     )

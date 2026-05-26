@@ -5,19 +5,11 @@ import dynamic from "next/dynamic"
 import {
     AlertCircle,
     Box,
-    Braces,
     CheckCircle2,
     Download,
     ExternalLink,
     FileCode2,
     FileText,
-    Globe2,
-    Github,
-    Layers3,
-    Loader2,
-    Mail,
-    MonitorPlay,
-    Sparkles,
     Upload,
 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
@@ -32,6 +24,14 @@ import { useAgentContext } from "@/lib/AgentContext"
 import ConnectWalletButton from "@/components/wallet/ConnectWalletButton"
 import { useWalletContext } from "@/lib/WalletContext"
 import { finalizeEscrowedTask, prepareEscrowedTask, rollbackEscrowedTask } from "@/lib/soroban/taskLifecycle"
+import {
+    BrowserAgentIcon,
+    CodingAgentIcon,
+    DocumentAgentIcon,
+    EmailAgentIcon,
+    GitHubAgentIcon,
+    SearchAgentIcon,
+} from "@/components/ui/ExecraIcons"
 
 
 const GitHubAgent = dynamic(() => import("@/components/agents/GitHubAgent"), {
@@ -117,42 +117,42 @@ const AGENTS: AgentDefinition[] = [
     {
         id: "github",
         label: "GitHub Agent",
-        icon: Github,
+        icon: GitHubAgentIcon,
         description: "Connect a repository, index source context, and review code through a focused repo workflow.",
         badge: "Repository intelligence",
     },
     {
         id: "coding",
         label: "Coding Agent",
-        icon: Braces,
+        icon: CodingAgentIcon,
         description: "Generate MVP-ready code artifacts and previews for product surfaces that feed the next integration phase.",
         badge: "Build surfaces",
     },
     {
         id: "document",
         label: "Document Agent",
-        icon: FileText,
+        icon: DocumentAgentIcon,
         description: "Parse project docs, specs, and datasets into concise analysis the team can use immediately.",
         badge: "Spec digestion",
     },
     {
         id: "email",
         label: "Email Agent",
-        icon: Mail,
+        icon: EmailAgentIcon,
         description: "Generate outbound emails, verify escrow first, and send through the configured mailbox without leaving the workspace.",
         badge: "Escrow-backed delivery",
     },
     {
         id: "search",
         label: "Web Search Agent",
-        icon: Globe2,
+        icon: SearchAgentIcon,
         description: "Run escrow-gated web searches, summarize source-backed results, and surface optional related videos.",
         badge: "Live web research",
     },
     {
         id: "browser",
         label: "Browser Automation Agent",
-        icon: MonitorPlay,
+        icon: BrowserAgentIcon,
         description: "Launch a visible browser, execute planned web actions, and stream live execution logs after escrow verification.",
         badge: "Live browser control",
     },
@@ -188,7 +188,7 @@ async function parseApiJson<T>(response: Response): Promise<T> {
 
 export default function AgentsPage() {
     const { agents, startAgentRun, completeAgentRun, failAgentRun } = useAgentContext()
-    const { walletAddress, shortWalletAddress, walletBalance, walletProviderId } = useWalletContext()
+    const { walletAddress, walletProviderId } = useWalletContext()
     const [selectedAgentId, setSelectedAgentId] = useState<WorkspaceAgentId>("github")
 
     const [codingPrompt, setCodingPrompt] = useState("")
@@ -377,22 +377,22 @@ export default function AgentsPage() {
     }
 
     return (
-        <div className="mx-auto w-full max-w-[1400px] overflow-x-hidden px-3 py-3 sm:px-5 sm:py-4 lg:px-6">
+        <div className="mx-auto w-full max-w-[1440px] overflow-x-hidden">
             {!walletAddress && (
-                <section className="mb-3 flex items-center justify-between gap-3 rounded-xl bg-surface/80 px-4 py-3 sm:mb-4">
-                    <span className="text-[13px] text-foreground-soft">Connect a Stellar wallet to unlock agents</span>
-                    <ConnectWalletButton className="button-primary !min-h-[32px] !px-3 !py-1 !text-xs" />
+                <section className="flex items-center justify-between gap-3 border-b border-border bg-surface px-6 py-3">
+                    <span className="font-sans text-[13px] text-foreground-soft">Connect a Stellar wallet to unlock agents</span>
+                    <ConnectWalletButton className="button-primary !min-h-[30px] !px-3 !py-1 !text-[11px]" />
                 </section>
             )}
 
-            <section id="agent-workbench" className="grid gap-3 sm:gap-4 xl:grid-cols-[220px_minmax(0,1fr)]">
+            <section id="agent-workbench" className="grid min-h-[calc(100vh-52px)] gap-0 sm:grid-cols-[220px_minmax(0,1fr)]">
                 <AgentSidebar
                     agents={AGENTS}
                     selectedAgentId={selectedAgentId}
                     onSelect={(agentId) => setSelectedAgentId(agentId as WorkspaceAgentId)}
                 />
 
-                <div className="min-w-0 space-y-3 sm:space-y-4">
+                <div className="min-w-0 bg-background">
                     {selectedAgent.id === "github" && (
                         <div id="github-setup" className="space-y-3">
                             <AgentQuickStart
@@ -479,14 +479,14 @@ export default function AgentsPage() {
                             secondaryLabel="Open workspace"
                             secondaryAction="#agent-workbench"
                         />
-                        <section className="overflow-hidden rounded-xl bg-surface">
-                            <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
-                                <h2 className="text-[13px] font-semibold text-foreground">Coding Agent</h2>
-                                <span className="text-[10px] font-medium text-primary">Escrow-backed</span>
+                        <section className="overflow-hidden border-b border-border bg-background">
+                            <div className="flex items-center justify-between border-b border-border bg-surface px-6 py-4">
+                                <h2 className="font-heading text-[13px] uppercase tracking-[0.06em] text-foreground">Coding Agent</h2>
+                                <span className="workspace-chip"><span className="text-[color:var(--ex-xlm)]">◈</span> {codingRewardXlm} XLM</span>
                             </div>
 
-                            <div className="grid gap-3 p-3 sm:p-4 xl:grid-cols-[minmax(0,1fr)_280px]">
-                                <div className="space-y-4">
+                            <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_200px]">
+                                <div className="space-y-3 px-6 py-8">
                                     <StepCard
                                         step="STEP 1"
                                         title="Define the build task"
@@ -506,14 +506,14 @@ export default function AgentsPage() {
                                         step="STEP 2"
                                         title="Choose output"
                                         state="active"
-                                        badge={<span className="workspace-chip">{codingRewardXlm} XLM</span>}
+                                        badge={<span className="workspace-chip"><span className="text-[color:var(--ex-xlm)]">◈</span> {codingRewardXlm} XLM</span>}
                                         footer="Escrow is created before execution."
                                     >
                                         <select
                                             value={codingLanguage}
                                             onChange={(event) => setCodingLanguage(event.target.value)}
                                             disabled={codingLocked}
-                                            className="w-full rounded-[20px] bg-background px-4 py-3 text-sm text-foreground focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
+                                            className="w-full rounded-[4px] border border-border bg-background px-3 py-3 font-heading text-[13px] text-foreground focus:border-[color:var(--ex-accent)] focus:shadow-[0_0_0_3px_rgba(37,99,235,0.08)] disabled:opacity-60"
                                         >
                                             <option value="html-css-js">HTML / CSS / JS project</option>
                                             <option value="typescript">TypeScript</option>
@@ -528,7 +528,7 @@ export default function AgentsPage() {
                                             onChange={(event) => setCodingRewardXlm(event.target.value)}
                                             inputMode="decimal"
                                             disabled={codingLocked}
-                                            className="w-full rounded-[20px] bg-background px-4 py-3 text-sm text-foreground focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
+                                            className="w-full rounded-[4px] border border-border bg-background px-3 py-3 font-heading text-[13px] text-foreground focus:border-[color:var(--ex-accent)] focus:shadow-[0_0_0_3px_rgba(37,99,235,0.08)] disabled:opacity-60"
                                         />
                                     </StepCard>
 
@@ -543,7 +543,6 @@ export default function AgentsPage() {
                                                 onClick={() => void runCodingAgent()}
                                                 disabled={!walletAddress || !codingPrompt.trim() || codingLocked}
                                             >
-                                                {codingState === "running" ? <Loader2 size={15} className="animate-spin" /> : <Braces size={15} />}
                                                 {codingState === "running" ? "Generating" : "Run Task"}
                                             </ActionButton>
                                             <ActionButton
@@ -564,26 +563,27 @@ export default function AgentsPage() {
                                     {codingError && <ErrorBox message={codingError} />}
                                     {codingTxState && <InfoBox message={codingTxState} />}
                                     {!walletAddress && (
-                                        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+                                        <div className="border border-[color:var(--ex-warning)] bg-[color:var(--ex-warning-bg)] px-4 py-3 text-sm text-[color:var(--ex-warning)]">
                                             Connect a wallet before generating code artifacts.
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="space-y-4 xl:sticky xl:top-4">
-                                    <div className="rounded-[24px] bg-background/80 p-4">
-                                        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Status</div>
-                                        <div className="mt-2 text-sm font-semibold text-foreground">
+                                <div className="border-t border-border bg-[color:var(--ex-surface-2)] px-4 py-8 xl:border-l xl:border-t-0">
+                                    <div className="space-y-8">
+                                    <div>
+                                        <div className="font-heading text-[10px] uppercase tracking-[0.1em] text-muted">Status</div>
+                                        <div className="mt-2 font-heading text-[13px] text-foreground">
                                             {codingState === "running" ? "Generating build output" : codingState === "done" ? "Output ready" : "Ready to run"}
                                         </div>
-                                        <p className="mt-2 text-sm text-foreground-soft">Minimal input, clean handoff, same execution flow.</p>
+                                        <p className="mt-3 text-[12px] leading-[1.5] text-foreground-soft">Minimal input, clean handoff, same execution flow.</p>
                                     </div>
 
-                                    <div className="space-y-4 rounded-[24px] bg-background/80 p-4">
+                                    <div className="space-y-4">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <div className="eyebrow">Output</div>
-                                                <div className="mt-1 text-sm font-semibold text-foreground">Build summary</div>
+                                                <div className="font-heading text-[10px] uppercase tracking-[0.1em] text-muted">Output</div>
+                                                <div className="mt-2 font-heading text-[13px] text-foreground">Build summary</div>
                                             </div>
                                             <StatusPill state={codingState} />
                                         </div>
@@ -600,9 +600,9 @@ export default function AgentsPage() {
 
                                         {codingResult?.mode === "project" && (
                                             <div className="space-y-4">
-                                                <div className="rounded-2xl bg-surface p-4">
-                                                    <div className="text-sm font-semibold text-foreground">{codingResult.projectId}</div>
-                                                    <div className="mt-1 text-sm text-foreground-soft">
+                                                <div className="border border-border bg-surface p-4">
+                                                    <div className="font-heading text-[12px] text-foreground">{codingResult.projectId}</div>
+                                                    <div className="mt-1 text-[13px] text-foreground-soft">
                                                         Frontend project prepared with HTML, CSS, and JavaScript assets.
                                                     </div>
                                                 </div>
@@ -622,12 +622,12 @@ export default function AgentsPage() {
 
                                         {codingResult?.mode === "single-file" && (
                                             <div className="space-y-4">
-                                                <div className="rounded-2xl bg-surface p-4">
+                                                <div className="border border-border bg-surface p-4">
                                                     <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                                                         <FileCode2 size={15} className="text-primary" />
                                                         {codingResult.fileName}
                                                     </div>
-                                                    <div className="mt-1 text-sm text-foreground-soft">
+                                                    <div className="mt-1 text-[13px] text-foreground-soft">
                                                         Generated in {codingResult.language} and saved under {codingResult.projectId}.
                                                     </div>
                                                 </div>
@@ -635,11 +635,12 @@ export default function AgentsPage() {
                                                     <Download size={14} />
                                                     Download Source
                                                 </a>
-                                                <pre className="max-h-[480px] overflow-auto rounded-2xl bg-[#0d1117] p-4 text-xs text-gray-200">
+                                                <pre className="max-h-[480px] overflow-auto border border-border bg-[color:var(--ex-surface)] p-4 font-heading text-[12px] text-foreground">
                                                     <code>{codingResult.code}</code>
                                                 </pre>
                                             </div>
                                         )}
+                                    </div>
                                     </div>
                                 </div>
                             </div>
@@ -661,21 +662,21 @@ export default function AgentsPage() {
                             secondaryLabel="Open workspace"
                             secondaryAction="#agent-workbench"
                         />
-                        <section className="overflow-hidden rounded-xl bg-surface">
-                            <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
-                                <h2 className="text-[13px] font-semibold text-foreground">Document Agent</h2>
-                                <span className="text-[10px] font-medium text-primary">Specs & datasets</span>
+                        <section className="overflow-hidden border-b border-border bg-background">
+                            <div className="flex items-center justify-between border-b border-border bg-surface px-6 py-4">
+                                <h2 className="font-heading text-[13px] uppercase tracking-[0.06em] text-foreground">Document Agent</h2>
+                                <span className="workspace-chip"><span className="text-[color:var(--ex-xlm)]">◈</span> {documentRewardXlm} XLM</span>
                             </div>
 
-                            <div className="grid gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-                                <div className="space-y-4">
+                            <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_200px]">
+                                <div className="space-y-3 px-6 py-8">
                                     <StepCard
                                         step="STEP 1"
                                         title="Upload document"
                                         state={documentFile ? "completed" : "active"}
                                         footer="One file keeps the result focused."
                                     >
-                                        <label className="flex cursor-pointer items-center gap-3 rounded-[22px] bg-background px-4 py-4 transition-all duration-200 hover:ring-primary/25 sm:gap-4 sm:px-5">
+                                        <label className="flex cursor-pointer items-center gap-3 rounded-[4px] border border-border bg-background px-4 py-4 transition-all duration-150 hover:border-[color:var(--ex-border-2)] sm:gap-4 sm:px-5">
                                             <Upload size={18} className="text-primary" />
                                             <div>
                                                 <div className="text-sm font-semibold text-foreground">
@@ -699,7 +700,7 @@ export default function AgentsPage() {
                                         step="STEP 2"
                                         title="Set the focus"
                                         state={documentQuestion.trim() ? "completed" : documentFile ? "active" : "idle"}
-                                        badge={<span className="workspace-chip">{documentRewardXlm} XLM</span>}
+                                        badge={<span className="workspace-chip"><span className="text-[color:var(--ex-xlm)]">◈</span> {documentRewardXlm} XLM</span>}
                                         footer="Ask one focused question."
                                     >
                                         <PromptBox
@@ -714,7 +715,7 @@ export default function AgentsPage() {
                                             onChange={(event) => setDocumentRewardXlm(event.target.value)}
                                             inputMode="decimal"
                                             disabled={documentLocked}
-                                            className="w-full rounded-[20px] bg-background px-4 py-3 text-sm text-foreground focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60"
+                                            className="w-full rounded-[4px] border border-border bg-background px-3 py-3 font-heading text-[13px] text-foreground focus:border-[color:var(--ex-accent)] focus:shadow-[0_0_0_3px_rgba(37,99,235,0.08)] disabled:opacity-60"
                                         />
                                     </StepCard>
 
@@ -729,7 +730,6 @@ export default function AgentsPage() {
                                                 onClick={() => void runDocumentAgent()}
                                                 disabled={!walletAddress || !documentFile || documentLocked}
                                             >
-                                                {documentState === "running" ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
                                                 {documentState === "running" ? "Analyzing" : "Run Task"}
                                             </ActionButton>
                                             <ActionButton
@@ -751,26 +751,27 @@ export default function AgentsPage() {
                                     {documentError && <ErrorBox message={documentError} />}
                                     {documentTxState && <InfoBox message={documentTxState} />}
                                     {!walletAddress && (
-                                        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+                                        <div className="border border-[color:var(--ex-warning)] bg-[color:var(--ex-warning-bg)] px-4 py-3 text-sm text-[color:var(--ex-warning)]">
                                             Connect a wallet before uploading and analyzing documents.
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="space-y-4 xl:sticky xl:top-4">
-                                    <div className="rounded-[24px] bg-background/80 p-4">
-                                        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Status</div>
-                                        <div className="mt-2 text-sm font-semibold text-foreground">
+                                <div className="border-t border-border bg-[color:var(--ex-surface-2)] px-4 py-8 xl:border-l xl:border-t-0">
+                                    <div className="space-y-8">
+                                    <div>
+                                        <div className="font-heading text-[10px] uppercase tracking-[0.1em] text-muted">Status</div>
+                                        <div className="mt-2 font-heading text-[13px] text-foreground">
                                             {documentState === "running" ? "Analyzing document" : documentState === "done" ? "Analysis ready" : "Ready to analyze"}
                                         </div>
-                                        <p className="mt-2 text-sm text-foreground-soft">Focused analysis with less UI noise.</p>
+                                        <p className="mt-3 text-[12px] leading-[1.5] text-foreground-soft">Focused analysis with less UI noise.</p>
                                     </div>
 
-                                    <div className="space-y-4 rounded-[24px] bg-background/80 p-4">
+                                    <div className="space-y-4">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <div className="eyebrow">Analysis</div>
-                                                <div className="mt-1 text-sm font-semibold text-foreground">Processed output</div>
+                                                <div className="font-heading text-[10px] uppercase tracking-[0.1em] text-muted">Analysis</div>
+                                                <div className="mt-2 font-heading text-[13px] text-foreground">Processed output</div>
                                             </div>
                                             <StatusPill state={documentState} />
                                         </div>
@@ -787,9 +788,9 @@ export default function AgentsPage() {
 
                                         {documentResult && (
                                             <div className="space-y-4">
-                                                <div className="rounded-2xl bg-surface p-4 text-sm">
-                                                    <div className="font-semibold text-foreground">{documentResult.fileName}</div>
-                                                    <div className="mt-1 text-foreground-soft">
+                                                <div className="border border-border bg-surface p-4 text-sm">
+                                                    <div className="font-heading text-[12px] text-foreground">{documentResult.fileName}</div>
+                                                    <div className="mt-1 text-[13px] text-foreground-soft">
                                                         Detected type: <span className="uppercase">{documentResult.fileType}</span>
                                                     </div>
                                                     {documentResult.truncated && (
@@ -803,6 +804,7 @@ export default function AgentsPage() {
                                                 </div>
                                             </div>
                                         )}
+                                    </div>
                                     </div>
                                 </div>
                             </div>
@@ -826,21 +828,19 @@ function StatusPill({ state }: { state: RunState }) {
         "Idle"
 
     const tone =
-        state === "running" ? "bg-primary-soft text-primary" :
-        state === "done" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" :
-        state === "error" ? "bg-red-500/10 text-red-600 dark:text-red-400" :
-        "bg-surface-elevated text-muted"
+        state === "running" ? "border-[color:var(--ex-accent)] bg-[color:var(--ex-accent-bg)] text-[color:var(--ex-accent)]" :
+        state === "done" ? "border-[color:var(--ex-success)] bg-[color:var(--ex-success-bg)] text-[color:var(--ex-success)]" :
+        state === "error" ? "border-[color:var(--ex-danger)] bg-[color:var(--ex-danger-bg)] text-[color:var(--ex-danger)]" :
+        "border-border bg-[color:var(--ex-surface-2)] text-muted"
 
-    return <span className={`rounded-full px-3 py-1 text-xs font-medium ${tone}`}>{label}</span>
+    return <span className={`rounded-[3px] border px-2 py-1 font-heading text-[10px] uppercase tracking-[0.06em] ${tone}`}>{label}</span>
 }
 
 function LoadingCopy({ text }: { text: string }) {
     return (
-        <div className="rounded-2xl bg-surface p-4">
-            <div className="flex items-center gap-2 text-sm text-foreground-soft">
-                <Loader2 size={15} className="animate-spin text-primary" />
-                {text}
-            </div>
+        <div className="border border-border bg-surface px-4 py-4">
+            <div className="scan-label">Running Agent...</div>
+            <div className="mt-3 text-[12px] text-foreground-soft">{text}</div>
         </div>
     )
 }
@@ -855,19 +855,19 @@ function EmptyState({
     body: string
 }) {
     return (
-        <div className="rounded-2xl bg-surface px-4 py-10 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+        <div className="border border-border bg-surface px-4 py-10 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center border border-border bg-[color:var(--ex-surface-2)] text-primary">
                 <Icon size={20} />
             </div>
-            <div className="mt-4 text-sm font-semibold text-foreground">{title}</div>
-            <p className="mt-2 text-sm leading-relaxed text-foreground-soft">{body}</p>
+            <div className="mt-4 font-heading text-[12px] uppercase tracking-[0.04em] text-foreground">{title}</div>
+            <p className="mt-2 text-[13px] leading-relaxed text-foreground-soft">{body}</p>
         </div>
     )
 }
 
 function ErrorBox({ message }: { message: string }) {
     return (
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-600 dark:text-red-400">
+        <div className="border border-[color:var(--ex-danger)] bg-[color:var(--ex-danger-bg)] px-4 py-3 text-sm text-[color:var(--ex-danger)]">
             <div className="flex items-start gap-2">
                 <AlertCircle size={15} className="mt-0.5 shrink-0" />
                 <span>{message}</span>
@@ -878,7 +878,7 @@ function ErrorBox({ message }: { message: string }) {
 
 function InfoBox({ message }: { message: string }) {
     return (
-        <div className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground-soft">
+        <div className="border border-[color:var(--ex-border-2)] bg-surface px-4 py-3 text-sm text-foreground-soft">
             {message}
         </div>
     )
@@ -891,21 +891,21 @@ function CodePreviewTabs({ files }: { files: GeneratedFiles }) {
     const activeFile = files[selectedTab] ?? ""
 
     return (
-        <div className="overflow-hidden rounded-2xl">
-            <div className="flex flex-wrap bg-surface">
+        <div className="overflow-hidden border border-border">
+            <div className="flex flex-wrap border-b border-border bg-surface">
                 {fileNames.map((fileName) => (
                     <button
                         key={fileName}
                         onClick={() => setActiveTab(fileName)}
-                        className={`px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] ${
-                            selectedTab === fileName ? "bg-surface-elevated text-foreground" : "text-muted"
+                        className={`px-4 py-3 font-heading text-[10px] uppercase tracking-[0.08em] ${
+                            selectedTab === fileName ? "bg-[color:var(--ex-surface-2)] text-foreground" : "text-muted"
                         }`}
                     >
                         {fileName}
                     </button>
                 ))}
             </div>
-            <pre className="max-h-[380px] overflow-auto bg-[#0d1117] p-4 text-xs text-gray-200">
+            <pre className="max-h-[380px] overflow-auto bg-surface p-4 font-heading text-[12px] text-foreground">
                 <code>{activeFile}</code>
             </pre>
         </div>

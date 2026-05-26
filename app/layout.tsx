@@ -1,4 +1,4 @@
-import { Inter, Manrope } from "next/font/google"
+import { DM_Mono, DM_Sans } from "next/font/google"
 import "./globals.css"
 import { AgentProvider } from "@/lib/AgentContext"
 import { ThemeProvider } from "@/components/ThemeProvider"
@@ -6,14 +6,16 @@ import { WalletProvider } from "@/lib/WalletContext"
 import AppShell from "@/components/layout/AppShell"
 import type { Metadata } from "next"
 
-const inter = Inter({
+const dmSans = DM_Sans({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-dm-sans",
+  weight: ["400", "500"],
 })
 
-const manrope = Manrope({
+const dmMono = DM_Mono({
   subsets: ["latin"],
-  variable: "--font-manrope",
+  variable: "--font-dm-mono",
+  weight: ["400", "500"],
 })
 
 export const metadata: Metadata = {
@@ -33,7 +35,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${manrope.variable} min-h-screen bg-background text-foreground antialiased`} suppressHydrationWarning>
+      <body className={`${dmSans.variable} ${dmMono.variable} min-h-screen bg-background text-foreground antialiased`} suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
           <WalletProvider>
             <AgentProvider>

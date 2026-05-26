@@ -1,7 +1,6 @@
 "use client"
 
 import type { ReactNode } from "react"
-import { CheckCircle2 } from "lucide-react"
 
 type StepCardProps = {
     step: string
@@ -22,26 +21,26 @@ export default function StepCard({
 }: StepCardProps) {
     const stateStyles =
         state === "active"
-            ? "bg-surface ring-1 ring-primary/15"
+            ? "border-[color:var(--ex-border-2)] bg-surface"
             : state === "completed"
-                ? "bg-surface/90 opacity-90 ring-1 ring-emerald-500/12"
-                : "bg-surface/85"
+                ? "border-[color:var(--ex-border)] bg-surface"
+                : "border-[color:var(--ex-border)] bg-surface"
 
     return (
-        <section className={`rounded-xl p-3 transition-all duration-150 ${stateStyles}`}>
+        <section className={`rounded-[6px] border px-6 py-5 transition-all duration-150 ${stateStyles}`}>
             <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">{step}</span>
-                    {state === "completed" && <CheckCircle2 size={13} className="text-emerald-500" />}
-                    <span className="text-[13px] font-semibold text-foreground">{title}</span>
+                    <span className="font-heading text-[10px] uppercase tracking-[0.08em] text-muted">{step}</span>
+                    <span className="font-heading text-[10px] uppercase tracking-[0.08em] text-muted">·</span>
+                    <span className="font-heading text-[15px] font-medium tracking-[0.02em] text-foreground">{title}</span>
                 </div>
                 {badge && <div className="shrink-0">{badge}</div>}
             </div>
 
-            <div className="mt-2.5 space-y-2.5">{children}</div>
+            <div className="mt-4 space-y-3">{children}</div>
 
             {footer && (
-                <div className="mt-2.5 border-t border-border/50 pt-2 text-[11px] text-foreground-soft">
+                <div className="mt-4 border-t border-border pt-3 text-[12px] text-foreground-soft">
                     {footer}
                 </div>
             )}

@@ -1,9 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight, Activity, BarChart3, Settings, Sparkles, Wallet } from "lucide-react"
 import BrandLogo from "@/components/layout/BrandLogo"
-import { ThemeToggle } from "@/components/ThemeToggle"
+import { StatusDot } from "@/components/ui/ExecraIcons"
 
 type LandingNavbarProps = {
     mounted: boolean
@@ -25,19 +24,19 @@ export default function LandingNavbar({
     shortWalletAddress,
     walletBalance,
 }: LandingNavbarProps) {
-    return (
-        <header className="sticky top-0 z-30 px-3 pt-3 sm:px-5 sm:pt-4">
-            <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 rounded-xl bg-surface/90 px-4 py-2.5 ring-1 ring-border backdrop-blur-md sm:px-5">
-                <div className="flex min-w-0 items-center gap-3">
-                    <BrandLogo href="/" priority />
-                </div>
+    const formattedBalance = walletBalance ? Number(walletBalance).toFixed(4) : "0.0000"
 
-                <nav className="hidden items-center gap-0.5 lg:flex">
+    return (
+        <header className="top-navbar sticky top-0 z-40 w-full px-4 sm:px-6">
+            <div className="mx-auto flex h-full w-full max-w-[1440px] items-center justify-between gap-6">
+                <BrandLogo href="/" priority />
+
+                <nav className="hidden items-center gap-8 lg:flex">
                     {NAV_ITEMS.map((item) => (
                         <Link
                             key={item.href}
                             href={item.href}
-                            className="rounded-lg px-3 py-1.5 text-[12px] font-medium text-foreground-soft transition-colors duration-150 hover:bg-surface-elevated hover:text-foreground"
+                            className="font-heading text-[12px] uppercase tracking-[0.06em] text-foreground-soft transition-colors duration-150 hover:text-foreground"
                         >
                             {item.label}
                         </Link>
@@ -45,50 +44,35 @@ export default function LandingNavbar({
                 </nav>
 
                 <div className="flex items-center gap-2">
-                    <ThemeToggle />
-
                     {mounted && walletAddress && (
-                        <div className="hidden items-center gap-1.5 rounded-lg bg-background/80 px-2.5 py-1.5 text-[11px] text-foreground-soft ring-1 ring-border sm:inline-flex">
-                            <Wallet size={12} className="text-primary" />
-                            <span>{shortWalletAddress}</span>
-                            <span className="rounded-full bg-primary-soft px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                                {walletBalance ?? "0"} XLM
-                            </span>
+                        <div className="hidden items-center gap-2 sm:flex">
+                            <div className="inline-flex min-h-[30px] items-center gap-2 rounded-[4px] border border-[color:var(--ex-border-2)] px-[10px] py-[6px] font-heading text-[11px] tracking-[0.02em] text-foreground-soft">
+                                <StatusDot tone="success" />
+                                <span>{shortWalletAddress}</span>
+                            </div>
+                            <div className="inline-flex min-h-[30px] items-center gap-2 rounded-[4px] border border-[color:var(--ex-border-2)] px-[10px] py-[6px] font-heading text-[11px] tracking-[0.02em] text-foreground">
+                                <span className="text-[color:var(--ex-xlm)]">◈</span>
+                                <span>{formattedBalance}</span>
+                            </div>
                         </div>
                     )}
 
-                    <Link
-                        href="/agents"
-                        className="inline-flex min-h-[36px] items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-[12px] font-semibold text-white transition-opacity duration-150 hover:opacity-90"
-                    >
-                        <Sparkles size={13} />
-                        <span className="hidden sm:inline">Open Workspace</span>
-                        <span className="sm:hidden">Workspace</span>
-                        <ArrowRight size={12} />
+                    <Link href="/agents" className="button-primary !min-h-[30px] !px-3 !py-1 !text-[11px]">
+                        Open Workspace →
                     </Link>
                 </div>
             </div>
 
-            {/* Mobile nav row */}
-            <div className="mx-auto mt-2 flex w-full max-w-7xl items-center justify-center gap-1.5 overflow-x-auto px-1 pb-1 lg:hidden">
-                {NAV_ITEMS.map((item, index) => {
-                    const Icon =
-                        index === 0 ? Sparkles :
-                        index === 1 ? BarChart3 :
-                        index === 2 ? Activity :
-                        Settings
-
-                    return (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-surface/80 px-2.5 py-1.5 text-[11px] font-medium text-foreground-soft ring-1 ring-border transition-colors duration-150 hover:text-foreground"
-                        >
-                            <Icon size={12} />
-                            {item.label}
-                        </Link>
-                    )
-                })}
+            <div className="mx-auto flex w-full max-w-[1440px] items-center gap-6 overflow-x-auto border-t border-[color:var(--ex-border)] lg:hidden">
+                {NAV_ITEMS.map((item) => (
+                    <Link
+                        key={item.href}
+                        href={item.href}
+                        className="inline-flex shrink-0 items-center py-2 font-heading text-[11px] uppercase tracking-[0.06em] text-foreground-soft transition-colors duration-150 hover:text-foreground"
+                    >
+                        {item.label}
+                    </Link>
+                ))}
             </div>
         </header>
     )

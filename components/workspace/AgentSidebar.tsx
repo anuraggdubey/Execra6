@@ -20,12 +20,12 @@ export default function AgentSidebar({
     onSelect,
 }: AgentSidebarProps) {
     return (
-        <aside className="rounded-2xl bg-surface/80 p-1.5 sm:sticky sm:top-4 sm:self-start sm:p-2">
-            <div className="mb-1.5 hidden px-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted sm:block">
+        <aside className="bg-[color:var(--ex-surface-2)] sm:sticky sm:top-[52px] sm:h-[calc(100vh-52px)] sm:w-[220px] sm:border-r sm:border-border">
+            <div className="px-4 pb-2 pt-5 font-heading text-[10px] uppercase tracking-[0.1em] text-muted">
                 Agents
             </div>
 
-            <div className="flex gap-1.5 overflow-x-auto pb-1 sm:hidden">
+            <div className="flex gap-2 overflow-x-auto border-b border-border px-4 pb-3 sm:hidden">
                 {agents.map((agent) => {
                     const Icon = agent.icon
                     const active = agent.id === selectedAgentId
@@ -33,20 +33,20 @@ export default function AgentSidebar({
                         <button
                             key={agent.id}
                             onClick={() => onSelect(agent.id)}
-                            className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-2 text-[11px] font-semibold transition-all duration-200 ${
+                            className={`inline-flex shrink-0 items-center gap-2 border px-3 py-2 font-heading text-[11px] uppercase tracking-[0.04em] ${
                                 active
-                                    ? "bg-primary text-white shadow-sm"
-                                    : "bg-background text-foreground-soft"
+                                    ? "border-[color:var(--ex-accent)] bg-[color:var(--ex-accent-bg)] text-foreground"
+                                    : "border-border bg-surface text-foreground-soft"
                             }`}
                         >
-                            <Icon size={13} />
+                            <Icon size={14} />
                             {agent.label.replace(" Agent", "")}
                         </button>
                     )
                 })}
             </div>
 
-            <div className="hidden space-y-0.5 sm:block">
+            <div className="hidden sm:block">
                 {agents.map((agent) => {
                     const Icon = agent.icon
                     const active = agent.id === selectedAgentId
@@ -55,24 +55,16 @@ export default function AgentSidebar({
                         <button
                             key={agent.id}
                             onClick={() => onSelect(agent.id)}
-                            className={`group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-all duration-150 ${
+                            className={`flex h-[52px] w-full items-center gap-3 border-l-2 px-4 text-left transition-colors duration-150 ${
                                 active
-                                    ? "bg-primary-soft shadow-sm ring-1 ring-primary/15"
-                                    : "text-foreground-soft hover:bg-background/80"
+                                    ? "border-l-[color:var(--ex-accent)] bg-[color:var(--ex-accent-bg)]"
+                                    : "border-l-transparent hover:bg-black/[0.03]"
                             }`}
                         >
-                            <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors duration-150 ${
-                                active ? "bg-primary text-white" : "bg-background text-primary"
-                            }`}>
-                                <Icon size={14} />
-                            </div>
+                            <Icon size={14} className={active ? "text-[color:var(--ex-accent)]" : "text-foreground"} />
                             <div className="min-w-0">
-                                <div className={`text-[13px] font-medium leading-tight ${active ? "text-foreground" : "text-foreground-soft group-hover:text-foreground"}`}>
-                                    {agent.label}
-                                </div>
-                                <div className="mt-0.5 text-[10px] font-medium text-muted">
-                                    {agent.badge}
-                                </div>
+                                <div className="font-heading text-[12px] tracking-[0.02em] text-foreground">{agent.label}</div>
+                                <div className="truncate font-sans text-[11px] text-muted">{agent.badge}</div>
                             </div>
                         </button>
                     )

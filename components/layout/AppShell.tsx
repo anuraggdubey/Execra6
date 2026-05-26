@@ -16,9 +16,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return (
         <div className="min-h-screen min-h-dvh bg-background text-foreground">
             <TopNavbar />
-            <main className={`${isAgentsPage ? "" : "px-3 py-4 sm:px-5 lg:px-6"}`}>
+            <main className={`${isAgentsPage ? "" : "px-4 pb-8 pt-10 sm:px-6"}`}>
                 {isAgentsPage ? children : (
-                    <div className="mx-auto w-full max-w-7xl">{children}</div>
+                    <div className="mx-auto w-full max-w-[1440px]">{children}</div>
                 )}
             </main>
         </div>

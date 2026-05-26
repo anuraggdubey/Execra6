@@ -1,56 +1,42 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import {
-    Activity,
-    CheckCircle2,
-    Clock,
-    ExternalLink,
-    FileText,
-    Github,
-    Braces,
-    Mail,
-    Globe2,
-    MonitorPlay,
-    Loader2,
-    Search,
-    XCircle,
-    AlertTriangle,
-    Link2,
-} from "lucide-react"
+import { AlertTriangle } from "lucide-react"
 import { useAgentContext, type ActivityLog } from "@/lib/AgentContext"
 import { useWalletContext } from "@/lib/WalletContext"
 import { isValidWalletAddress } from "@/lib/taskFeatures"
 import type { TaskRecord } from "@/types/tasks"
+import {
+    BrowserAgentIcon,
+    CodingAgentIcon,
+    DocumentAgentIcon,
+    EmailAgentIcon,
+    GitHubAgentIcon,
+    SearchAgentIcon,
+} from "@/components/ui/ExecraIcons"
 
 type TabId = "tasks" | "events"
 
 const AGENT_ICONS: Record<string, React.ElementType> = {
-    github: Github,
-    coding: Braces,
-    document: FileText,
-    email: Mail,
-    search: Globe2,
-    browser: MonitorPlay,
-}
-
-const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
-    completed: { icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-    failed: { icon: XCircle, color: "text-red-500", bg: "bg-red-500/10" },
-    pending: { icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
+    github: GitHubAgentIcon,
+    coding: CodingAgentIcon,
+    document: DocumentAgentIcon,
+    email: EmailAgentIcon,
+    search: SearchAgentIcon,
+    browser: BrowserAgentIcon,
 }
 
 const CHAIN_STATUS_LABELS: Record<string, { label: string; color: string }> = {
-    completed: { label: "Confirmed", color: "text-emerald-500" },
-    pending: { label: "Pending", color: "text-amber-500" },
-    cancelled: { label: "Cancelled", color: "text-red-400" },
-    failed: { label: "Failed", color: "text-red-500" },
+    completed: { label: "Confirmed", color: "text-[color:var(--ex-success)]" },
+    pending: { label: "Pending", color: "text-[color:var(--ex-warning)]" },
+    cancelled: { label: "Cancelled", color: "text-[color:var(--ex-danger)]" },
+    failed: { label: "Failed", color: "text-[color:var(--ex-danger)]" },
     uninitialized: { label: "Off-chain", color: "text-muted" },
 }
 
 function shortenHash(hash: string | null) {
     if (!hash) return null
-    return `${hash.slice(0, 6)}…${hash.slice(-6)}`
+    return `${hash.slice(0, 6)}...${hash.slice(-6)}`
 }
 
 function explorerUrl(hash: string) {
@@ -96,7 +82,6 @@ export default function ActivityPage() {
 
     const effectiveWalletAddress = walletAddress ?? stableWalletAddress
 
-    // Fetch task history from Supabase when wallet connected
     useEffect(() => {
         if (!isHydrated) {
             return
@@ -138,7 +123,6 @@ export default function ActivityPage() {
         }
     }, [effectiveWalletAddress, isHydrated])
 
-    // Filter tasks by search
     const filteredTasks = useMemo(() => {
         if (!searchTerm.trim()) return tasks
         const q = searchTerm.toLowerCase()
@@ -151,7 +135,6 @@ export default function ActivityPage() {
         )
     }, [tasks, searchTerm])
 
-    // Filter events by search
     const filteredEvents = useMemo(() => {
         if (!searchTerm.trim()) return activities
         const q = searchTerm.toLowerCase()
@@ -163,83 +146,63 @@ export default function ActivityPage() {
     }, [activities, searchTerm])
 
     return (
-        <div className="mx-auto max-w-5xl space-y-4 px-3 py-4 sm:px-6 sm:py-5">
-            {/* Header */}
+        <div className="mx-auto max-w-[900px] space-y-6 px-6 py-10">
             <div>
-                <h1 className="text-lg font-semibold text-foreground">Activity</h1>
-                <p className="text-sm text-foreground-soft">Complete execution history and on-chain task records</p>
+                <div className="font-heading text-[11px] uppercase tracking-[0.1em] text-muted">Activity</div>
+                <p className="mt-2 text-[14px] text-foreground-soft">Complete execution history and on-chain task records</p>
             </div>
 
-            {/* Search + Tabs */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="input-shell flex flex-1 items-center gap-2 px-3 py-2 sm:max-w-sm">
-                    <Search size={14} className="text-muted" />
-                    <input
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="Search activity..."
-                        className="w-full bg-transparent text-sm text-foreground placeholder:text-muted"
-                    />
-                </div>
-                <div className="flex items-center gap-1">
-                    {([
-                        { id: "tasks" as TabId, label: "Tasks", icon: Activity },
-                        { id: "events" as TabId, label: "Events", icon: Clock },
-                    ]).map((tab) => (
+            <div className="space-y-3">
+                <input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="search activity..."
+                    className="w-full rounded-[4px] border border-border bg-surface px-3 py-2.5 font-heading text-[13px] text-foreground placeholder:text-muted focus:border-[color:var(--ex-accent)] focus:shadow-[0_0_0_3px_rgba(37,99,235,0.1)]"
+                />
+
+                <div className="flex items-center gap-5">
+                    {(["tasks", "events"] as TabId[]).map((tab) => (
                         <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                                activeTab === tab.id
-                                    ? "bg-primary-soft text-foreground"
-                                    : "text-muted hover:text-foreground"
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`pb-1 font-heading text-[12px] uppercase tracking-[0.06em] ${
+                                activeTab === tab
+                                    ? "border-b-[1.5px] border-[color:var(--ex-accent)] text-foreground"
+                                    : "text-muted"
                             }`}
                         >
-                            <tab.icon size={13} />
-                            {tab.label}
+                            {tab}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* Tasks Tab */}
             {activeTab === "tasks" && (
-                <div className="space-y-3">
+                <div className="space-y-2">
                     {!isHydrated && (
-                        <div className="flex items-center justify-center gap-2 py-12 text-sm text-foreground-soft">
-                            <Loader2 size={16} className="animate-spin text-primary" />
-                            Restoring wallet session...
+                        <div className="py-12 text-center">
+                            <div className="scan-label">Loading Activity...</div>
+                            <div className="mt-3 text-sm text-foreground-soft">Restoring wallet session...</div>
                         </div>
                     )}
 
                     {isHydrated && !effectiveWalletAddress && (
-                        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-4 text-center">
-                            <AlertTriangle size={18} className="mx-auto mb-2 text-amber-500" />
-                            <p className="text-sm font-medium text-foreground">Connect a wallet to view task history</p>
-                            <p className="mt-1 text-xs text-foreground-soft">Tasks are linked to your Stellar wallet identity.</p>
-                        </div>
+                        <NoticeBox tone="warning" title="Connect a wallet to view task history" body="Tasks are linked to your Stellar wallet identity." />
                     )}
 
                     {isHydrated && effectiveWalletAddress && tasksError && (
-                        <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-4 text-center">
-                            <AlertTriangle size={18} className="mx-auto mb-2 text-red-500" />
-                            <p className="text-sm font-medium text-foreground">Could not load task history</p>
-                            <p className="mt-1 text-xs text-foreground-soft">{tasksError}</p>
-                        </div>
+                        <NoticeBox tone="danger" title="Could not load task history" body={tasksError} />
                     )}
 
                     {isHydrated && effectiveWalletAddress && tasksLoading && tasks.length === 0 && (
-                        <div className="flex items-center justify-center gap-2 py-12 text-sm text-foreground-soft">
-                            <Loader2 size={16} className="animate-spin text-primary" />
-                            Loading tasks…
+                        <div className="py-12 text-center">
+                            <div className="scan-label">Loading Tasks...</div>
                         </div>
                     )}
 
                     {isHydrated && effectiveWalletAddress && !tasksLoading && !tasksError && filteredTasks.length === 0 && (
-                        <div className="py-12 text-center">
-                            <Activity size={24} className="mx-auto mb-3 text-muted" />
-                            <p className="text-sm font-medium text-foreground">No tasks found</p>
-                            <p className="mt-1 text-xs text-foreground-soft">Run any agent from the workspace to see tasks here.</p>
+                        <div className="border border-border bg-surface px-4 py-10 text-center text-sm text-foreground-soft">
+                            No tasks found.
                         </div>
                     )}
 
@@ -249,12 +212,11 @@ export default function ActivityPage() {
                 </div>
             )}
 
-            {/* Events Tab */}
             {activeTab === "events" && (
-                <div className="space-y-1">
+                <div className="space-y-2">
                     {filteredEvents.length === 0 ? (
-                        <div className="py-16 text-center">
-                            <p className="text-sm text-muted">No matching events</p>
+                        <div className="border border-border bg-surface px-4 py-10 text-center text-sm text-foreground-soft">
+                            No matching events.
                         </div>
                     ) : (
                         filteredEvents.map((event) => (
@@ -267,132 +229,126 @@ export default function ActivityPage() {
     )
 }
 
-/* ── Task Detail Card ────────────────────────────────────── */
-
-function TaskCard({ task }: { task: TaskRecord }) {
-    const AgentIcon = AGENT_ICONS[task.agent_type] ?? FileText
-    const statusCfg = STATUS_CONFIG[task.status] ?? STATUS_CONFIG.pending
-    const StatusIcon = statusCfg.icon
-    const chainCfg = CHAIN_STATUS_LABELS[task.on_chain_status] ?? CHAIN_STATUS_LABELS.uninitialized
-    const rewardXlm = task.reward_stroops ? (Number(task.reward_stroops) / 10_000_000).toFixed(7) : null
-    const featureConfig = task.feature_config
+function NoticeBox({ tone, title, body }: { tone: "warning" | "danger"; title: string; body: string }) {
+    const classes =
+        tone === "warning"
+            ? "border-[color:var(--ex-warning)] bg-[color:var(--ex-warning-bg)] text-[color:var(--ex-warning)]"
+            : "border-[color:var(--ex-danger)] bg-[color:var(--ex-danger-bg)] text-[color:var(--ex-danger)]"
 
     return (
-        <div className="rounded-xl border border-border bg-surface p-4 transition-colors hover:bg-surface-elevated">
-            {/* Top row: agent type + status */}
-            <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className={`border px-4 py-4 text-center ${classes}`}>
+            <AlertTriangle size={18} className="mx-auto mb-2" />
+            <p className="font-heading text-[12px] uppercase tracking-[0.04em]">{title}</p>
+            <p className="mt-2 text-[12px] leading-[1.5]">{body}</p>
+        </div>
+    )
+}
+
+function TaskCard({ task }: { task: TaskRecord }) {
+    const AgentIcon = AGENT_ICONS[task.agent_type] ?? DocumentAgentIcon
+    const chainCfg = CHAIN_STATUS_LABELS[task.on_chain_status] ?? CHAIN_STATUS_LABELS.uninitialized
+    const rewardXlm = task.reward_stroops ? (Number(task.reward_stroops) / 10_000_000).toFixed(7) : null
+    const statusBorder =
+        task.status === "completed"
+            ? "var(--ex-success)"
+            : task.status === "failed"
+                ? "var(--ex-danger)"
+                : "var(--ex-warning)"
+
+    return (
+        <div className="rounded-[6px] border border-border bg-surface px-6 py-5" style={{ borderLeftWidth: 3, borderLeftColor: statusBorder }}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary">
-                        <AgentIcon size={14} />
-                    </div>
-                    <span className="text-sm font-semibold capitalize text-foreground">{task.agent_type} Agent</span>
+                    <AgentIcon size={14} className="text-foreground" />
+                    <span className="font-heading text-[13px] tracking-[0.02em] text-foreground capitalize">{task.agent_type} Agent</span>
                 </div>
-                <div className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${statusCfg.bg} ${statusCfg.color}`}>
-                    <StatusIcon size={12} />
-                    {task.status}
-                </div>
+                <StatusBadge status={task.status} />
             </div>
 
-            {/* Prompt */}
-            <p className="mt-3 text-sm leading-relaxed text-foreground-soft">{task.input_prompt}</p>
+            <p className="my-3 text-[14px] leading-[1.5] text-foreground-soft">{task.input_prompt}</p>
 
-            {/* Detail grid */}
-            <div className="mt-3 grid gap-x-6 gap-y-2 text-xs sm:grid-cols-2 lg:grid-cols-3">
-                {/* Created */}
+            <div className="grid gap-3 sm:grid-cols-2">
                 <DetailItem label="Created" value={new Date(task.created_at).toLocaleString()} />
-
-                {/* Reward */}
-                {rewardXlm && <DetailItem label="Reward" value={`${rewardXlm} XLM`} highlight />}
-
-                {/* On-chain status */}
-                <div className="flex items-center gap-2">
-                    <span className="font-medium text-muted">Chain:</span>
-                    <span className={`font-semibold ${chainCfg.color}`}>{chainCfg.label}</span>
-                </div>
-
-                {/* Create TX */}
-                {task.create_tx_hash && (
-                    <TxHashLink label="Create TX" hash={task.create_tx_hash} />
-                )}
-
-                {/* Complete TX */}
-                {task.complete_tx_hash && (
-                    <TxHashLink label="Complete TX" hash={task.complete_tx_hash} />
-                )}
-
-                {/* Cancel TX */}
-                {task.cancel_tx_hash && (
-                    <TxHashLink label="Cancel TX" hash={task.cancel_tx_hash} />
-                )}
-
-                {/* Contract */}
-                {task.contract_id && (
-                    <DetailItem label="Contract" value={shortenHash(task.contract_id) ?? "—"} />
-                )}
-
-                {/* On-chain Task ID */}
-                {task.on_chain_task_id && (
-                    <DetailItem label="On-chain ID" value={task.on_chain_task_id} />
-                )}
-
-                {featureConfig && (
-                    <DetailItem label="Fee" value={featureConfig.feeMode === "sponsored" ? "Sponsored" : "User Paid"} />
-                )}
+                {rewardXlm && <DetailItem label="Reward" value={`◈ ${rewardXlm}`} highlight="xlm" />}
+                <DetailItem label="Chain" value={chainCfg.label} className={chainCfg.color} />
+                {task.create_tx_hash && <TxHashLink label="Create TX" hash={task.create_tx_hash} />}
+                {task.complete_tx_hash && <TxHashLink label="Complete TX" hash={task.complete_tx_hash} />}
+                {task.cancel_tx_hash && <TxHashLink label="Cancel TX" hash={task.cancel_tx_hash} />}
+                {task.contract_id && <DetailItem label="Contract" value={shortenHash(task.contract_id) ?? "-"} />}
+                {task.on_chain_task_id && <DetailItem label="On-chain ID" value={task.on_chain_task_id} />}
             </div>
         </div>
     )
 }
 
-function DetailItem({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function StatusBadge({ status }: { status: string }) {
+    const styles =
+        status === "completed"
+            ? "border-[color:var(--ex-success)] bg-[color:var(--ex-success-bg)] text-[color:var(--ex-success)]"
+            : status === "failed"
+                ? "border-[color:var(--ex-danger)] bg-[color:var(--ex-danger-bg)] text-[color:var(--ex-danger)]"
+                : "border-[color:var(--ex-warning)] bg-[color:var(--ex-warning-bg)] text-[color:var(--ex-warning)]"
+
     return (
-        <div className="flex items-center gap-2">
-            <span className="font-medium text-muted">{label}:</span>
-            <span className={highlight ? "font-semibold text-primary" : "text-foreground-soft"}>{value}</span>
+        <span className={`inline-flex rounded-[3px] border px-1.5 py-0.5 font-heading text-[10px] uppercase tracking-[0.06em] ${styles}`}>
+            {status}
+        </span>
+    )
+}
+
+function DetailItem({ label, value, highlight, className = "" }: { label: string; value: string; highlight?: "xlm"; className?: string }) {
+    return (
+        <div>
+            <div className="font-heading text-[10px] uppercase tracking-[0.08em] text-muted">{label}</div>
+            <div className={`mt-1 font-heading text-[11px] ${highlight === "xlm" ? "text-[color:var(--ex-xlm)]" : "text-foreground-soft"} ${className}`}>
+                {value}
+            </div>
         </div>
     )
 }
 
 function TxHashLink({ label, hash }: { label: string; hash: string }) {
     return (
-        <div className="flex items-center gap-2">
-            <span className="font-medium text-muted">{label}:</span>
+        <div>
+            <div className="font-heading text-[10px] uppercase tracking-[0.08em] text-muted">{label}</div>
             <a
                 href={explorerUrl(hash)}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 font-mono text-primary hover:underline"
+                className="mt-1 inline-flex items-center gap-1 font-heading text-[11px] text-[color:var(--ex-accent)] hover:underline"
             >
-                <Link2 size={10} />
-                {shortenHash(hash)}
-                <ExternalLink size={9} className="opacity-60" />
+                {shortenHash(hash)} ↗
             </a>
         </div>
     )
 }
 
-/* ── Event Row (original activities) ──────────────────────── */
-
 function EventRow({ event }: { event: ActivityLog }) {
+    const tone =
+        event.status === "success"
+            ? "border-[color:var(--ex-success)] bg-[color:var(--ex-success-bg)] text-[color:var(--ex-success)]"
+            : event.status === "error"
+                ? "border-[color:var(--ex-danger)] bg-[color:var(--ex-danger-bg)] text-[color:var(--ex-danger)]"
+                : "border-border bg-[color:var(--ex-surface-2)] text-muted"
+
     return (
-        <div className="flex items-start justify-between gap-4 rounded-lg px-3 py-3 hover:bg-surface-elevated">
-            <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-foreground">{event.agent}</span>
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                        event.status === "success" ? "bg-emerald-500/10 text-emerald-500"
-                        : event.status === "error" ? "bg-red-500/10 text-red-500"
-                        : "bg-surface-elevated text-muted"
-                    }`}>
-                        {event.status}
-                    </span>
+        <div className="rounded-[6px] border border-border bg-surface px-5 py-4">
+            <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                        <span className="font-heading text-[12px] uppercase tracking-[0.04em] text-foreground">{event.agent}</span>
+                        <span className={`inline-flex rounded-[3px] border px-1.5 py-0.5 font-heading text-[10px] uppercase tracking-[0.06em] ${tone}`}>
+                            {event.status}
+                        </span>
+                    </div>
+                    <p className="mt-2 text-[13px] leading-[1.5] text-foreground-soft">{event.message}</p>
                 </div>
-                <p className="mt-1 truncate text-xs text-foreground-soft">{event.message}</p>
-            </div>
-            <div className="shrink-0 text-right">
-                <div className="text-[10px] text-muted">{event.time}</div>
-                {event.reward !== null && (
-                    <div className="mt-0.5 text-xs font-medium text-success">+{event.reward}</div>
-                )}
+                <div className="shrink-0 text-right">
+                    <div className="font-heading text-[10px] uppercase tracking-[0.08em] text-muted">{event.time}</div>
+                    {event.reward !== null && (
+                        <div className="mt-1 font-heading text-[11px] text-[color:var(--ex-xlm)]">◈ {event.reward}</div>
+                    )}
+                </div>
             </div>
         </div>
     )
