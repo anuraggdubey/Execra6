@@ -38,25 +38,26 @@ export async function POST(req: Request) {
         createBrowserSession(sessionId)
         await upsertUserByWallet(walletAddress)
 
-        const verification = await verifyPendingEscrow({
-            walletAddress,
-            agentType: "browser",
-            blockchain: body.blockchain,
-        })
-
         const task = await createTask({
             walletAddress,
             agentType: "browser",
             inputPrompt: instruction,
             status: "pending",
-            blockchain: verification.blockchain,
+            blockchain: body.blockchain,
         })
         taskId = task.id
 
-        const result = await runBrowserAgent({
-            sessionId,
-            instruction,
-        })
+        const [verification, result] = await Promise.all([
+            verifyPendingEscrow({
+                walletAddress,
+                agentType: "browser",
+                blockchain: body.blockchain,
+            }),
+            runBrowserAgent({
+                sessionId,
+                instruction,
+            }),
+        ])
 
         await updateTask({
             taskId,

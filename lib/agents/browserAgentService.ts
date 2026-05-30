@@ -84,6 +84,8 @@ async function synthesizeBrowserAnswer(params: {
         }),
         temperature: 0.2,
         maxTokens: 500,
+        timeoutMs: 2500,
+        maxAttempts: 1,
     })
 
     try {

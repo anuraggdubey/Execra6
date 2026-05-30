@@ -221,7 +221,7 @@ export default function AgentsPage() {
         setCodingState("running")
         setCodingError(null)
         setCodingResult(null)
-        setCodingTxState("Creating escrow transaction on Soroban...")
+        setCodingTxState("Submitting escrow transaction to Soroban...")
         startAgentRun("coding", `Generating build output for: ${codingPrompt}`)
 
         let preparedTask: Awaited<ReturnType<typeof prepareEscrowedTask>> | null = null
@@ -233,7 +233,7 @@ export default function AgentsPage() {
                 agentType: "coding",
             })
 
-            setCodingTxState(`Escrow created (TX: ${preparedTask.blockchainPayload.createTxHash.slice(0, 8)}...). Running agent...`)
+            setCodingTxState(`Escrow submitted (TX: ${preparedTask.blockchainPayload.createTxHash.slice(0, 8)}...). Running agent while chain confirms...`)
             const response = await fetch("/api/run-coding-agent", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -247,6 +247,7 @@ export default function AgentsPage() {
             const data = await response.json()
             if (!response.ok) throw new Error(data.error ?? "Coding agent failed")
 
+            let proofPayload: Record<string, unknown>
             if (data.files && data.preview?.previewUrl) {
                 setCodingResult({
                     mode: "project",
@@ -254,6 +255,11 @@ export default function AgentsPage() {
                     files: data.files,
                     previewUrl: data.preview.previewUrl,
                 })
+                proofPayload = {
+                    kind: "project",
+                    files: data.files,
+                    previewUrl: data.preview.previewUrl,
+                }
             } else if (data.singleFile) {
                 setCodingResult({
                     mode: "single-file",
@@ -262,19 +268,27 @@ export default function AgentsPage() {
                     language: data.singleFile.language,
                     code: data.singleFile.code,
                 })
+                proofPayload = {
+                    kind: "single-file",
+                    fileName: data.singleFile.filename,
+                    language: data.singleFile.language,
+                    code: data.singleFile.code,
+                }
             } else {
                 throw new Error("Coding agent returned an incomplete payload.")
             }
 
-            setCodingTxState("Finalizing escrow and confirming on-chain...")
+            setCodingTxState("Finalizing escrow after agent completion...")
             setCodingState("done")
             completeAgentRun("coding", `Prepared ${data.projectId} for handoff and follow-on integration.`)
 
             const finalizeResult = await finalizeEscrowedTask({
                 taskId: data.taskId,
+                agentType: "coding",
                 walletAddress,
                 walletProviderId,
                 onChainTaskId: preparedTask.onChainTaskId,
+                proofPayload,
                 blockchainPayload: preparedTask.blockchainPayload,
             })
 
@@ -303,7 +317,7 @@ export default function AgentsPage() {
         setDocumentState("running")
         setDocumentError(null)
         setDocumentResult(null)
-        setDocumentTxState("Creating escrow transaction on Soroban...")
+        setDocumentTxState("Submitting escrow transaction to Soroban...")
         startAgentRun("document", `Analyzing ${documentFile.name}`)
 
         let preparedTask: Awaited<ReturnType<typeof prepareEscrowedTask>> | null = null
@@ -314,7 +328,7 @@ export default function AgentsPage() {
                 rewardXlm: documentRewardXlm,
                 agentType: "document",
             })
-            setDocumentTxState(`Escrow created (TX: ${preparedTask.blockchainPayload.createTxHash.slice(0, 8)}...). Analyzing...`)
+            setDocumentTxState(`Escrow submitted (TX: ${preparedTask.blockchainPayload.createTxHash.slice(0, 8)}...). Analyzing while chain confirms...`)
             const formData = new FormData()
             formData.append("file", documentFile)
             formData.append("question", documentQuestion)
@@ -345,15 +359,23 @@ export default function AgentsPage() {
                 throw new Error("Document analysis returned without a task ID.")
             }
             const documentTaskId = data.taskId
-            setDocumentTxState("Finalizing escrow and confirming on-chain...")
+            const proofPayload = {
+                fileName: data.fileName,
+                fileType: data.fileType,
+                analysis: data.analysis,
+                truncated: Boolean(data.truncated),
+            }
+            setDocumentTxState("Finalizing escrow after analysis...")
             setDocumentState("done")
             completeAgentRun("document", `Analyzed ${data.fileName} and prepared a concise brief.`)
 
             const finalizeResult = await finalizeEscrowedTask({
                 taskId: documentTaskId,
+                agentType: "document",
                 walletAddress,
                 walletProviderId,
                 onChainTaskId: preparedTask.onChainTaskId,
+                proofPayload,
                 blockchainPayload: preparedTask.blockchainPayload,
             })
 
@@ -377,22 +399,21 @@ export default function AgentsPage() {
     }
 
     return (
-        <div className="mx-auto w-full max-w-[1440px] overflow-x-hidden">
+        <div className="w-full overflow-x-hidden px-4 py-4 sm:px-6 lg:px-8">
             {!walletAddress && (
-                <section className="flex items-center justify-between gap-3 border-b border-border bg-surface px-6 py-3">
+                <section className="mx-auto mb-4 flex w-full max-w-[1200px] flex-col gap-2 rounded-[6px] border border-border bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-6">
                     <span className="font-sans text-[13px] text-foreground-soft">Connect a Stellar wallet to unlock agents</span>
                     <ConnectWalletButton className="button-primary !min-h-[30px] !px-3 !py-1 !text-[11px]" />
                 </section>
             )}
-
-            <section id="agent-workbench" className="grid min-h-[calc(100vh-52px)] gap-0 sm:grid-cols-[220px_minmax(0,1fr)]">
+            <section id="agent-workbench" className="mx-auto grid min-h-[calc(100dvh-92px)] w-full max-w-[1200px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-[8px] border border-border bg-surface shadow-[0_12px_40px_rgba(15,23,42,0.06)] sm:grid-cols-[260px_minmax(0,1fr)] sm:grid-rows-none">
                 <AgentSidebar
                     agents={AGENTS}
                     selectedAgentId={selectedAgentId}
                     onSelect={(agentId) => setSelectedAgentId(agentId as WorkspaceAgentId)}
                 />
 
-                <div className="min-w-0 bg-background">
+                <div className="min-w-0 overflow-x-hidden bg-background p-4 sm:p-5">
                     {selectedAgent.id === "github" && (
                         <div id="github-setup" className="space-y-3">
                             <AgentQuickStart
@@ -479,36 +500,37 @@ export default function AgentsPage() {
                             secondaryLabel="Open workspace"
                             secondaryAction="#agent-workbench"
                         />
-                        <section className="overflow-hidden border-b border-border bg-background">
-                            <div className="flex items-center justify-between border-b border-border bg-surface px-6 py-4">
+                        <section className="overflow-hidden rounded-[6px] border border-border bg-background">
+                            <div className="flex items-center justify-between border-b border-border bg-surface px-4 py-4 sm:px-6">
                                 <h2 className="font-heading text-[13px] uppercase tracking-[0.06em] text-foreground">Coding Agent</h2>
                                 <span className="workspace-chip"><span className="text-[color:var(--ex-xlm)]">◈</span> {codingRewardXlm} XLM</span>
                             </div>
 
-                            <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_200px]">
-                                <div className="space-y-3 px-6 py-8">
-                                    <StepCard
-                                        step="STEP 1"
-                                        title="Define the build task"
-                                        state={codingPrompt.trim() ? "completed" : "active"}
-                                        footer="Keep the request focused."
-                                    >
-                                        <PromptBox
-                                            value={codingPrompt}
-                                            onChange={setCodingPrompt}
-                                            rows={8}
-                                            disabled={codingLocked}
-                                            placeholder="Ask the agent to analyze, review, or execute..."
-                                        />
-                                    </StepCard>
+                            {/* Input steps */}
+                            <div className="space-y-3 px-4 py-6 sm:px-6 sm:py-8">
+                                <StepCard
+                                    step="STEP 1"
+                                    title="Define the build task"
+                                    state={codingPrompt.trim() ? "completed" : "active"}
+                                    footer="Keep the request focused."
+                                >
+                                    <PromptBox
+                                        value={codingPrompt}
+                                        onChange={setCodingPrompt}
+                                        rows={6}
+                                        disabled={codingLocked}
+                                        placeholder="Ask the agent to analyze, review, or execute..."
+                                    />
+                                </StepCard>
 
-                                    <StepCard
-                                        step="STEP 2"
-                                        title="Choose output"
-                                        state="active"
-                                        badge={<span className="workspace-chip"><span className="text-[color:var(--ex-xlm)]">◈</span> {codingRewardXlm} XLM</span>}
-                                        footer="Escrow is created before execution."
-                                    >
+                                <StepCard
+                                    step="STEP 2"
+                                    title="Choose output"
+                                    state="active"
+                                    badge={<span className="workspace-chip"><span className="text-[color:var(--ex-xlm)]">◈</span> {codingRewardXlm} XLM</span>}
+                                    footer="Escrow is created before execution."
+                                >
+                                    <div className="grid gap-3 sm:grid-cols-2">
                                         <select
                                             value={codingLanguage}
                                             onChange={(event) => setCodingLanguage(event.target.value)}
@@ -528,120 +550,112 @@ export default function AgentsPage() {
                                             onChange={(event) => setCodingRewardXlm(event.target.value)}
                                             inputMode="decimal"
                                             disabled={codingLocked}
+                                            placeholder="Reward in XLM"
                                             className="w-full rounded-[4px] border border-border bg-background px-3 py-3 font-heading text-[13px] text-foreground focus:border-[color:var(--ex-accent)] focus:shadow-[0_0_0_3px_rgba(37,99,235,0.08)] disabled:opacity-60"
                                         />
-                                    </StepCard>
+                                    </div>
+                                </StepCard>
 
-                                    <StepCard
-                                        step="STEP 3"
-                                        title="Run task"
-                                        state={codingState === "done" ? "completed" : codingState === "running" ? "active" : "idle"}
-                                        footer={walletAddress ? "Run task to generate files and preview." : "Connect a wallet to continue."}
-                                    >
-                                        <div className="flex flex-wrap gap-3">
-                                            <ActionButton
-                                                onClick={() => void runCodingAgent()}
-                                                disabled={!walletAddress || !codingPrompt.trim() || codingLocked}
-                                            >
-                                                {codingState === "running" ? "Generating" : "Run Task"}
-                                            </ActionButton>
-                                            <ActionButton
-                                                variant="secondary"
-                                                onClick={() => {
-                                                    setCodingPrompt("")
-                                                    setCodingResult(null)
-                                                    setCodingError(null)
-                                                    setCodingState("idle")
-                                                }}
-                                                disabled={codingLocked}
-                                            >
-                                                Reset
-                                            </ActionButton>
-                                        </div>
-                                    </StepCard>
+                                <StepCard
+                                    step="STEP 3"
+                                    title="Run task"
+                                    state={codingState === "done" ? "completed" : codingState === "running" ? "active" : "idle"}
+                                    footer={walletAddress ? "Run task to generate files and preview." : "Connect a wallet to continue."}
+                                >
+                                    <div className="flex flex-wrap gap-3">
+                                        <ActionButton
+                                            onClick={() => void runCodingAgent()}
+                                            disabled={!walletAddress || !codingPrompt.trim() || codingLocked}
+                                        >
+                                            {codingState === "running" ? "Generating" : "Run Task"}
+                                        </ActionButton>
+                                        <ActionButton
+                                            variant="secondary"
+                                            onClick={() => {
+                                                setCodingPrompt("")
+                                                setCodingResult(null)
+                                                setCodingError(null)
+                                                setCodingState("idle")
+                                            }}
+                                            disabled={codingLocked}
+                                        >
+                                            Reset
+                                        </ActionButton>
+                                    </div>
+                                </StepCard>
 
-                                    {codingError && <ErrorBox message={codingError} />}
-                                    {codingTxState && <InfoBox message={codingTxState} />}
-                                    {!walletAddress && (
-                                        <div className="border border-[color:var(--ex-warning)] bg-[color:var(--ex-warning-bg)] px-4 py-3 text-sm text-[color:var(--ex-warning)]">
-                                            Connect a wallet before generating code artifacts.
-                                        </div>
-                                    )}
+                                {codingError && <ErrorBox message={codingError} />}
+                                {codingTxState && <InfoBox message={codingTxState} />}
+                                {!walletAddress && (
+                                    <div className="rounded-[6px] border border-[color:var(--ex-warning)] bg-[color:var(--ex-warning-bg)] px-4 py-3 text-sm text-[color:var(--ex-warning)]">
+                                        Connect a wallet before generating code artifacts.
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Output section — full width below */}
+                            <div className="border-t border-border bg-[color:var(--ex-surface-2)] px-4 py-6 sm:px-6 sm:py-8">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <div className="font-heading text-[10px] uppercase tracking-[0.1em] text-muted">Output</div>
+                                        <div className="mt-1 font-heading text-[13px] text-foreground">Build summary</div>
+                                    </div>
+                                    <StatusPill state={codingState} />
                                 </div>
 
-                                <div className="border-t border-border bg-[color:var(--ex-surface-2)] px-4 py-8 xl:border-l xl:border-t-0">
-                                    <div className="space-y-8">
-                                    <div>
-                                        <div className="font-heading text-[10px] uppercase tracking-[0.1em] text-muted">Status</div>
-                                        <div className="mt-2 font-heading text-[13px] text-foreground">
-                                            {codingState === "running" ? "Generating build output" : codingState === "done" ? "Output ready" : "Ready to run"}
-                                        </div>
-                                        <p className="mt-3 text-[12px] leading-[1.5] text-foreground-soft">Minimal input, clean handoff, same execution flow.</p>
-                                    </div>
+                                <div className="mt-5 space-y-4">
+                                    {codingState === "running" && <LoadingCopy text="Generating project artifacts..." />}
 
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <div className="font-heading text-[10px] uppercase tracking-[0.1em] text-muted">Output</div>
-                                                <div className="mt-2 font-heading text-[13px] text-foreground">Build summary</div>
+                                    {!codingResult && codingState !== "running" && (
+                                        <EmptyState
+                                            icon={Box}
+                                            title="No generated output yet"
+                                            body="Run the agent to create the next build surface."
+                                        />
+                                    )}
+
+                                    {codingResult?.mode === "project" && (
+                                        <div className="space-y-4">
+                                            <div className="rounded-[6px] border border-border bg-surface p-4">
+                                                <div className="font-heading text-[12px] text-foreground">{codingResult.projectId}</div>
+                                                <div className="mt-1 text-[13px] text-foreground-soft">
+                                                    Frontend project prepared with HTML, CSS, and JavaScript assets.
+                                                </div>
                                             </div>
-                                            <StatusPill state={codingState} />
-                                        </div>
-
-                                        {codingState === "running" && <LoadingCopy text="Generating project artifacts..." />}
-
-                                        {!codingResult && codingState !== "running" && (
-                                            <EmptyState
-                                                icon={Box}
-                                                title="No generated output yet"
-                                                body="Run the agent to create the next build surface."
-                                            />
-                                        )}
-
-                                        {codingResult?.mode === "project" && (
-                                            <div className="space-y-4">
-                                                <div className="border border-border bg-surface p-4">
-                                                    <div className="font-heading text-[12px] text-foreground">{codingResult.projectId}</div>
-                                                    <div className="mt-1 text-[13px] text-foreground-soft">
-                                                        Frontend project prepared with HTML, CSS, and JavaScript assets.
-                                                    </div>
-                                                </div>
-                                                <div className="grid gap-3 sm:grid-cols-2">
-                                                    <a href={codingResult.previewUrl} target="_blank" rel="noreferrer" className="button-secondary">
-                                                        <ExternalLink size={14} />
-                                                        Open Preview
-                                                    </a>
-                                                    <a href={`/api/download/${codingResult.projectId}`} className="button-secondary">
-                                                        <Download size={14} />
-                                                        Download Bundle
-                                                    </a>
-                                                </div>
-                                                <CodePreviewTabs files={codingResult.files} />
-                                            </div>
-                                        )}
-
-                                        {codingResult?.mode === "single-file" && (
-                                            <div className="space-y-4">
-                                                <div className="border border-border bg-surface p-4">
-                                                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                                                        <FileCode2 size={15} className="text-primary" />
-                                                        {codingResult.fileName}
-                                                    </div>
-                                                    <div className="mt-1 text-[13px] text-foreground-soft">
-                                                        Generated in {codingResult.language} and saved under {codingResult.projectId}.
-                                                    </div>
-                                                </div>
-                                                <a href={`/api/download/${codingResult.projectId}`} className="button-secondary w-full">
-                                                    <Download size={14} />
-                                                    Download Source
+                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                <a href={codingResult.previewUrl} target="_blank" rel="noreferrer" className="button-secondary">
+                                                    <ExternalLink size={14} />
+                                                    Open Preview
                                                 </a>
-                                                <pre className="max-h-[480px] overflow-auto border border-border bg-[color:var(--ex-surface)] p-4 font-heading text-[12px] text-foreground">
-                                                    <code>{codingResult.code}</code>
-                                                </pre>
+                                                <a href={`/api/download/${codingResult.projectId}`} className="button-secondary">
+                                                    <Download size={14} />
+                                                    Download Bundle
+                                                </a>
                                             </div>
-                                        )}
-                                    </div>
-                                    </div>
+                                            <CodePreviewTabs files={codingResult.files} />
+                                        </div>
+                                    )}
+
+                                    {codingResult?.mode === "single-file" && (
+                                        <div className="space-y-4">
+                                            <div className="rounded-[6px] border border-border bg-surface p-4">
+                                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                                                    <FileCode2 size={15} className="text-primary" />
+                                                    {codingResult.fileName}
+                                                </div>
+                                                <div className="mt-1 text-[13px] text-foreground-soft">
+                                                    Generated in {codingResult.language} and saved under {codingResult.projectId}.
+                                                </div>
+                                            </div>
+                                            <a href={`/api/download/${codingResult.projectId}`} className="button-secondary w-full">
+                                                <Download size={14} />
+                                                Download Source
+                                            </a>
+                                            <pre className="max-h-[480px] overflow-auto rounded-[6px] border border-border bg-[color:var(--ex-surface)] p-4 font-heading text-[12px] text-foreground">
+                                                <code>{codingResult.code}</code>
+                                            </pre>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </section>
@@ -662,150 +676,141 @@ export default function AgentsPage() {
                             secondaryLabel="Open workspace"
                             secondaryAction="#agent-workbench"
                         />
-                        <section className="overflow-hidden border-b border-border bg-background">
-                            <div className="flex items-center justify-between border-b border-border bg-surface px-6 py-4">
+                        <section className="overflow-hidden rounded-[6px] border border-border bg-background">
+                            <div className="flex items-center justify-between border-b border-border bg-surface px-4 py-4 sm:px-6">
                                 <h2 className="font-heading text-[13px] uppercase tracking-[0.06em] text-foreground">Document Agent</h2>
                                 <span className="workspace-chip"><span className="text-[color:var(--ex-xlm)]">◈</span> {documentRewardXlm} XLM</span>
                             </div>
 
-                            <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_200px]">
-                                <div className="space-y-3 px-6 py-8">
-                                    <StepCard
-                                        step="STEP 1"
-                                        title="Upload document"
-                                        state={documentFile ? "completed" : "active"}
-                                        footer="One file keeps the result focused."
-                                    >
-                                        <label className="flex cursor-pointer items-center gap-3 rounded-[4px] border border-border bg-background px-4 py-4 transition-all duration-150 hover:border-[color:var(--ex-border-2)] sm:gap-4 sm:px-5">
-                                            <Upload size={18} className="text-primary" />
-                                            <div>
-                                                <div className="text-sm font-semibold text-foreground">
-                                                    {documentFile ? documentFile.name : "Upload a project document"}
-                                                </div>
-                                                <div className="mt-1 text-sm text-foreground-soft">
-                                                    PDF, Excel, CSV, JSON, or TXT.
-                                                </div>
+                            {/* Input steps */}
+                            <div className="space-y-3 px-4 py-6 sm:px-6 sm:py-8">
+                                <StepCard
+                                    step="STEP 1"
+                                    title="Upload document"
+                                    state={documentFile ? "completed" : "active"}
+                                    footer="One file keeps the result focused."
+                                >
+                                    <label className="flex cursor-pointer items-center gap-3 rounded-[4px] border border-border bg-background px-4 py-4 transition-all duration-150 hover:border-[color:var(--ex-border-2)] sm:gap-4 sm:px-5">
+                                        <Upload size={18} className="text-primary" />
+                                        <div>
+                                            <div className="text-sm font-semibold text-foreground">
+                                                {documentFile ? documentFile.name : "Upload a project document"}
                                             </div>
-                                            <input
-                                                type="file"
-                                                accept=".pdf,.xlsx,.xls,.csv,.json,.txt"
-                                                onChange={(event) => setDocumentFile(event.target.files?.[0] ?? null)}
-                                                disabled={documentLocked}
-                                                className="hidden"
-                                            />
-                                        </label>
-                                    </StepCard>
-
-                                    <StepCard
-                                        step="STEP 2"
-                                        title="Set the focus"
-                                        state={documentQuestion.trim() ? "completed" : documentFile ? "active" : "idle"}
-                                        badge={<span className="workspace-chip"><span className="text-[color:var(--ex-xlm)]">◈</span> {documentRewardXlm} XLM</span>}
-                                        footer="Ask one focused question."
-                                    >
-                                        <PromptBox
-                                            value={documentQuestion}
-                                            onChange={setDocumentQuestion}
-                                            rows={6}
-                                            disabled={documentLocked}
-                                            placeholder="Ask the agent to analyze, review, or execute..."
-                                        />
+                                            <div className="mt-1 text-sm text-foreground-soft">
+                                                PDF, Excel, CSV, JSON, or TXT.
+                                            </div>
+                                        </div>
                                         <input
-                                            value={documentRewardXlm}
-                                            onChange={(event) => setDocumentRewardXlm(event.target.value)}
-                                            inputMode="decimal"
+                                            type="file"
+                                            accept=".pdf,.xlsx,.xls,.csv,.json,.txt"
+                                            onChange={(event) => setDocumentFile(event.target.files?.[0] ?? null)}
                                             disabled={documentLocked}
-                                            className="w-full rounded-[4px] border border-border bg-background px-3 py-3 font-heading text-[13px] text-foreground focus:border-[color:var(--ex-accent)] focus:shadow-[0_0_0_3px_rgba(37,99,235,0.08)] disabled:opacity-60"
+                                            className="hidden"
                                         />
-                                    </StepCard>
+                                    </label>
+                                </StepCard>
 
-                                    <StepCard
-                                        step="STEP 3"
-                                        title="Run task"
-                                        state={documentState === "done" ? "completed" : documentState === "running" ? "active" : "idle"}
-                                        footer={walletAddress ? "Analyze the uploaded file." : "Connect a wallet to continue."}
-                                    >
-                                        <div className="flex flex-wrap gap-3">
-                                            <ActionButton
-                                                onClick={() => void runDocumentAgent()}
-                                                disabled={!walletAddress || !documentFile || documentLocked}
-                                            >
-                                                {documentState === "running" ? "Analyzing" : "Run Task"}
-                                            </ActionButton>
-                                            <ActionButton
-                                                variant="secondary"
-                                                onClick={() => {
-                                                    setDocumentFile(null)
-                                                    setDocumentQuestion("")
-                                                    setDocumentResult(null)
-                                                    setDocumentError(null)
-                                                    setDocumentState("idle")
-                                                }}
-                                                disabled={documentLocked}
-                                            >
-                                                Clear
-                                            </ActionButton>
-                                        </div>
-                                    </StepCard>
+                                <StepCard
+                                    step="STEP 2"
+                                    title="Set the focus"
+                                    state={documentQuestion.trim() ? "completed" : documentFile ? "active" : "idle"}
+                                    badge={<span className="workspace-chip"><span className="text-[color:var(--ex-xlm)]">◈</span> {documentRewardXlm} XLM</span>}
+                                    footer="Ask one focused question."
+                                >
+                                    <PromptBox
+                                        value={documentQuestion}
+                                        onChange={setDocumentQuestion}
+                                        rows={4}
+                                        disabled={documentLocked}
+                                        placeholder="Ask the agent to analyze, review, or execute..."
+                                    />
+                                    <input
+                                        value={documentRewardXlm}
+                                        onChange={(event) => setDocumentRewardXlm(event.target.value)}
+                                        inputMode="decimal"
+                                        disabled={documentLocked}
+                                        placeholder="Reward in XLM"
+                                        className="w-full rounded-[4px] border border-border bg-background px-3 py-3 font-heading text-[13px] text-foreground focus:border-[color:var(--ex-accent)] focus:shadow-[0_0_0_3px_rgba(37,99,235,0.08)] disabled:opacity-60"
+                                    />
+                                </StepCard>
 
-                                    {documentError && <ErrorBox message={documentError} />}
-                                    {documentTxState && <InfoBox message={documentTxState} />}
-                                    {!walletAddress && (
-                                        <div className="border border-[color:var(--ex-warning)] bg-[color:var(--ex-warning-bg)] px-4 py-3 text-sm text-[color:var(--ex-warning)]">
-                                            Connect a wallet before uploading and analyzing documents.
-                                        </div>
-                                    )}
+                                <StepCard
+                                    step="STEP 3"
+                                    title="Run task"
+                                    state={documentState === "done" ? "completed" : documentState === "running" ? "active" : "idle"}
+                                    footer={walletAddress ? "Analyze the uploaded file." : "Connect a wallet to continue."}
+                                >
+                                    <div className="flex flex-wrap gap-3">
+                                        <ActionButton
+                                            onClick={() => void runDocumentAgent()}
+                                            disabled={!walletAddress || !documentFile || documentLocked}
+                                        >
+                                            {documentState === "running" ? "Analyzing" : "Run Task"}
+                                        </ActionButton>
+                                        <ActionButton
+                                            variant="secondary"
+                                            onClick={() => {
+                                                setDocumentFile(null)
+                                                setDocumentQuestion("")
+                                                setDocumentResult(null)
+                                                setDocumentError(null)
+                                                setDocumentState("idle")
+                                            }}
+                                            disabled={documentLocked}
+                                        >
+                                            Clear
+                                        </ActionButton>
+                                    </div>
+                                </StepCard>
+
+                                {documentError && <ErrorBox message={documentError} />}
+                                {documentTxState && <InfoBox message={documentTxState} />}
+                                {!walletAddress && (
+                                    <div className="rounded-[6px] border border-[color:var(--ex-warning)] bg-[color:var(--ex-warning-bg)] px-4 py-3 text-sm text-[color:var(--ex-warning)]">
+                                        Connect a wallet before uploading and analyzing documents.
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Output section — full width below */}
+                            <div className="border-t border-border bg-[color:var(--ex-surface-2)] px-4 py-6 sm:px-6 sm:py-8">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <div className="font-heading text-[10px] uppercase tracking-[0.1em] text-muted">Analysis</div>
+                                        <div className="mt-1 font-heading text-[13px] text-foreground">Processed output</div>
+                                    </div>
+                                    <StatusPill state={documentState} />
                                 </div>
 
-                                <div className="border-t border-border bg-[color:var(--ex-surface-2)] px-4 py-8 xl:border-l xl:border-t-0">
-                                    <div className="space-y-8">
-                                    <div>
-                                        <div className="font-heading text-[10px] uppercase tracking-[0.1em] text-muted">Status</div>
-                                        <div className="mt-2 font-heading text-[13px] text-foreground">
-                                            {documentState === "running" ? "Analyzing document" : documentState === "done" ? "Analysis ready" : "Ready to analyze"}
-                                        </div>
-                                        <p className="mt-3 text-[12px] leading-[1.5] text-foreground-soft">Focused analysis with less UI noise.</p>
-                                    </div>
+                                <div className="mt-5 space-y-4">
+                                    {documentState === "running" && <LoadingCopy text="Parsing and analyzing the document..." />}
 
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <div className="font-heading text-[10px] uppercase tracking-[0.1em] text-muted">Analysis</div>
-                                                <div className="mt-2 font-heading text-[13px] text-foreground">Processed output</div>
-                                            </div>
-                                            <StatusPill state={documentState} />
-                                        </div>
+                                    {!documentResult && documentState !== "running" && (
+                                        <EmptyState
+                                            icon={FileText}
+                                            title="No document analysis yet"
+                                            body="Upload one file and run the task."
+                                        />
+                                    )}
 
-                                        {documentState === "running" && <LoadingCopy text="Parsing and analyzing the document..." />}
-
-                                        {!documentResult && documentState !== "running" && (
-                                            <EmptyState
-                                                icon={FileText}
-                                                title="No document analysis yet"
-                                                body="Upload one file and run the task."
-                                            />
-                                        )}
-
-                                        {documentResult && (
-                                            <div className="space-y-4">
-                                                <div className="border border-border bg-surface p-4 text-sm">
-                                                    <div className="font-heading text-[12px] text-foreground">{documentResult.fileName}</div>
-                                                    <div className="mt-1 text-[13px] text-foreground-soft">
-                                                        Detected type: <span className="uppercase">{documentResult.fileType}</span>
+                                    {documentResult && (
+                                        <div className="space-y-4">
+                                            <div className="rounded-[6px] border border-border bg-surface p-4 text-sm">
+                                                <div className="font-heading text-[12px] text-foreground">{documentResult.fileName}</div>
+                                                <div className="mt-1 text-[13px] text-foreground-soft">
+                                                    Detected type: <span className="uppercase">{documentResult.fileType}</span>
+                                                </div>
+                                                {documentResult.truncated && (
+                                                    <div className="mt-2 text-xs text-warning">
+                                                        Content was trimmed to fit the analysis window.
                                                     </div>
-                                                    {documentResult.truncated && (
-                                                        <div className="mt-2 text-xs text-warning">
-                                                            Content was trimmed to fit the analysis window.
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="prose prose-sm max-w-none dark:prose-invert">
-                                                    <ReactMarkdown components={mdComponents}>{documentResult.analysis}</ReactMarkdown>
-                                                </div>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
-                                    </div>
+                                            <div className="prose prose-sm max-w-none dark:prose-invert">
+                                                <ReactMarkdown components={mdComponents}>{documentResult.analysis}</ReactMarkdown>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </section>

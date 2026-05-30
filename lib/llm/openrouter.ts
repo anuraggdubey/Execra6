@@ -3,6 +3,7 @@ import { AgentExecutionError, createLlmError } from "@/lib/agents/shared"
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 const DEFAULT_MODEL = process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini"
+const DEFAULT_TIMEOUT_MS = 8000
 const FALLBACK_MODELS = [
     DEFAULT_MODEL,
     "openai/gpt-4o-mini",
@@ -10,6 +11,7 @@ const FALLBACK_MODELS = [
     "google/gemma-3-27b-it:free",
     "mistralai/mistral-small-3.1-24b-instruct:free",
 ]
+let clientSingleton: OpenAI | null = null
 
 function getApiKey() {
     const apiKey = process.env.OPENROUTER_API_KEY ?? process.env.OPENAI_API_KEY
@@ -22,14 +24,18 @@ function getApiKey() {
 }
 
 export function getOpenRouterClient() {
-    return new OpenAI({
-        apiKey: getApiKey(),
-        baseURL: OPENROUTER_BASE_URL,
-        defaultHeaders: {
-            "HTTP-Referer": process.env.APP_URL ?? "http://localhost:3001",
-            "X-Title": "Execra",
-        },
-    })
+    if (!clientSingleton) {
+        clientSingleton = new OpenAI({
+            apiKey: getApiKey(),
+            baseURL: OPENROUTER_BASE_URL,
+            defaultHeaders: {
+                "HTTP-Referer": process.env.APP_URL ?? "http://localhost:3001",
+                "X-Title": "Execra",
+            },
+        })
+    }
+
+    return clientSingleton
 }
 
 export async function completeWithOpenRouter(options: {
@@ -38,9 +44,12 @@ export async function completeWithOpenRouter(options: {
     model?: string
     maxTokens?: number
     temperature?: number
+    timeoutMs?: number
+    maxAttempts?: number
 }) {
     const client = getOpenRouterClient()
-    const models = options.model ? [options.model] : FALLBACK_MODELS
+    const fallbackModels = options.model ? [options.model] : FALLBACK_MODELS
+    const models = fallbackModels.slice(0, Math.max(1, options.maxAttempts ?? fallbackModels.length))
     let lastError: unknown
 
     for (const model of models) {
@@ -53,6 +62,7 @@ export async function completeWithOpenRouter(options: {
                 ],
                 max_tokens: options.maxTokens ?? 1500,
                 temperature: options.temperature ?? 0.4,
+                timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
             })
 
             const content = completion.choices[0]?.message?.content?.trim()

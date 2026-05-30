@@ -103,8 +103,8 @@ export default function EmailAgent() {
 
         setRunState("generating")
         setError(null)
-        setTxState("Creating escrow transaction on Soroban...")
-        setVerificationStatus("Creating escrow before generating the email preview...")
+        setTxState("Submitting escrow transaction to Soroban...")
+        setVerificationStatus("Submitting escrow, then generating the email preview while chain confirmation catches up...")
         setDelivery(null)
         startAgentRun("email", `Generating email preview for ${receiverEmail}`)
 
@@ -118,7 +118,7 @@ export default function EmailAgent() {
                 agentType: "email",
             })
 
-            setTxState(`Escrow created (TX: ${preparedTask.blockchainPayload.createTxHash.slice(0, 8)}...). Generating preview...`)
+            setTxState(`Escrow submitted (TX: ${preparedTask.blockchainPayload.createTxHash.slice(0, 8)}...). Generating preview while chain confirms...`)
             const response = await fetch("/api/agent/email", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -143,9 +143,17 @@ export default function EmailAgent() {
             setTxState("Finalizing escrow — confirming on-chain...")
             const finalizeResult = await finalizeEscrowedTask({
                 taskId: data.taskId,
+                agentType: "email",
                 walletAddress: walletAddress!,
                 walletProviderId,
                 onChainTaskId: preparedTask.onChainTaskId,
+                proofPayload: {
+                    generatedEmail: data.generatedEmail,
+                    senderEmail,
+                    receiverEmail,
+                    requestedSubject: subject,
+                    tone,
+                },
                 blockchainPayload: preparedTask.blockchainPayload,
             })
             setVerificationStatus("On-chain confirmed. Preview generated and ready for download, Gmail, or platform send.")

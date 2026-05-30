@@ -3,6 +3,7 @@ export const SOROBAN_CONFIG = {
     rpcUrl: process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? "https://soroban-testnet.stellar.org",
     networkPassphrase: process.env.NEXT_PUBLIC_SOROBAN_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015",
     contractId: process.env.NEXT_PUBLIC_SOROBAN_CONTRACT_ID ?? "",
+    proofContractId: process.env.NEXT_PUBLIC_SOROBAN_PROOF_CONTRACT_ID ?? "",
     xlmSacId: process.env.NEXT_PUBLIC_STELLAR_XLM_SAC_ID ?? "",
 } as const
 

@@ -317,7 +317,7 @@ export default function GitHubAgent() {
         setIndexing(true)
         setError(null)
         setResult("")
-        setTxState("Creating escrow transaction on Soroban...")
+        setTxState("Submitting escrow transaction to Soroban...")
         startAgentRun("github", `Indexing ${selectedRepo.fullName}`)
 
         let preparedTask: Awaited<ReturnType<typeof prepareEscrowedTask>> | null = null
@@ -347,7 +347,7 @@ export default function GitHubAgent() {
             setRepoContext(data.context)
             setRepoFiles(data.files)
             setRepoUrlInput(`https://github.com/${(data.repo ?? selectedRepo).fullName}`)
-            setTxState("Confirming on-chain...")
+            setTxState("Repository indexed. Finalizing escrow...")
             completeAgentRun(
                 "github",
                 `Indexed ${selectedRepo.fullName} and loaded ${data.files?.length ?? 0} repository files.`,
@@ -356,9 +356,15 @@ export default function GitHubAgent() {
 
             await finalizeEscrowedTask({
                 taskId: data.taskId,
+                agentType: "github",
                 walletAddress,
                 walletProviderId,
                 onChainTaskId: preparedTask.onChainTaskId,
+                proofPayload: {
+                    repo: data.repo ?? selectedRepo,
+                    context: data.context,
+                    files: data.files,
+                },
                 blockchainPayload: preparedTask.blockchainPayload,
             })
             setTxState("On-chain confirmed")
@@ -387,7 +393,7 @@ export default function GitHubAgent() {
 
         setLoading(true)
         setError(null)
-        setTxState("Creating escrow transaction on Soroban...")
+        setTxState("Submitting escrow transaction to Soroban...")
         startAgentRun("github", `Analyzing ${selectedRepo.fullName} for wallet ${walletAddress}: ${question}`)
 
         let preparedTask: Awaited<ReturnType<typeof prepareEscrowedTask>> | null = null
@@ -414,14 +420,21 @@ export default function GitHubAgent() {
             const data = await res.json()
             if (!res.ok) throw new Error(data.error ?? "GitHub agent failed")
             setResult(data.answer)
-            setTxState("Confirming on-chain...")
+            setTxState("Repository response ready. Finalizing escrow...")
             completeAgentRun("github", `Completed repository prompt for ${selectedRepo.fullName}.`, 5)
 
             await finalizeEscrowedTask({
                 taskId: data.taskId,
+                agentType: "github",
                 walletAddress,
                 walletProviderId,
                 onChainTaskId: preparedTask.onChainTaskId,
+                proofPayload: {
+                    owner,
+                    repo,
+                    question,
+                    answer: data.answer,
+                },
                 blockchainPayload: preparedTask.blockchainPayload,
             })
             setTxState("On-chain confirmed")

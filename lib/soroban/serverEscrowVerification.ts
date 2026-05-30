@@ -1,6 +1,5 @@
 import {
     Account,
-    nativeToScVal,
     Operation,
     rpc,
     scValToNative,
@@ -13,6 +12,8 @@ import { normalizeTaskFeatureConfig, normalizeTaskFeatureState } from "@/lib/tas
 import type { AgentType, OnChainTaskStatus, TaskFeatureConfig, TaskFeatureState } from "@/types/tasks"
 
 const SOROBAN_FEE = "1000000"
+const DEFAULT_WAIT_MS = 25_000
+const DEFAULT_POLL_MS = 750
 
 export type EscrowBlockchainPayload = {
     onChainTaskId: string
@@ -129,7 +130,15 @@ function normalizeTask(value: unknown): NormalizedOnChainTask {
     }
 }
 
-async function fetchOnChainTask(taskId: bigint) {
+function symbolScVal(value: string) {
+    return xdr.ScVal.scvSymbol(value)
+}
+
+function sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function fetchOnChainTask(taskId: string) {
     if (!sorobanConfigured()) {
         throw new AgentExecutionError(
             "ESCROW_VERIFICATION_FAILED",
@@ -148,7 +157,7 @@ async function fetchOnChainTask(taskId: bigint) {
             Operation.invokeContractFunction({
                 contract: SOROBAN_CONFIG.contractId,
                 function: "get_task",
-                args: [nativeToScVal(taskId, { type: "u64" })],
+                args: [symbolScVal(taskId)],
             })
         )
         .setTimeout(60)
@@ -162,13 +171,37 @@ async function fetchOnChainTask(taskId: bigint) {
     return normalizeTask(scValToNative(simulation.result.retval))
 }
 
+async function waitForPendingTask(taskId: string) {
+    const startedAt = Date.now()
+    let lastError: unknown = null
+
+    while (Date.now() - startedAt < DEFAULT_WAIT_MS) {
+        try {
+            const task = await fetchOnChainTask(taskId)
+            if (task.status === "pending") {
+                return task
+            }
+        } catch (error: unknown) {
+            lastError = error
+        }
+
+        await sleep(DEFAULT_POLL_MS)
+    }
+
+    if (lastError instanceof Error) {
+        throw new AgentExecutionError("ESCROW_VERIFICATION_FAILED", lastError.message, 403)
+    }
+
+    throw new AgentExecutionError("ESCROW_VERIFICATION_FAILED", "Escrow payment was submitted but not confirmed in time.", 403)
+}
+
 export async function verifyPendingEscrow(params: {
     walletAddress: string
     agentType: AgentType
     blockchain: unknown
 }) {
     const blockchain = requireEscrowPayload(params.blockchain)
-    const onChainTask = await fetchOnChainTask(BigInt(blockchain.onChainTaskId))
+    const onChainTask = await waitForPendingTask(blockchain.onChainTaskId)
 
     if (blockchain.contractId !== SOROBAN_CONFIG.contractId) {
         throw new AgentExecutionError("ESCROW_VERIFICATION_FAILED", "Escrow contract mismatch.", 403)

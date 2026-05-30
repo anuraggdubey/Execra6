@@ -1,9 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
+import { RefreshCw } from "lucide-react"
 import { useHasMounted } from "@/lib/useHasMounted"
 import ConnectWalletButton from "@/components/wallet/ConnectWalletButton"
 import { useWalletContext } from "@/lib/WalletContext"
+import {
+    depositPlatformBalance,
+    fetchPlatformBalance,
+    stroopsToXlm,
+    withdrawPlatformBalance,
+} from "@/lib/soroban/taskEscrowClient"
 import {
     DEFAULT_TASK_FEATURE_CONFIG,
     readStoredTaskFeatureConfig,
@@ -19,6 +26,38 @@ export default function SettingsPage() {
         typeof window === "undefined" ? DEFAULT_TASK_FEATURE_CONFIG : readStoredTaskFeatureConfig()
     ))
     const [saveMessage, setSaveMessage] = useState<string | null>(null)
+    const [platformBalanceStroops, setPlatformBalanceStroops] = useState<bigint | null>(null)
+    const [balanceAmountXlm, setBalanceAmountXlm] = useState("1.0000000")
+    const [balancePending, setBalancePending] = useState(false)
+    const [balanceMessage, setBalanceMessage] = useState<string | null>(null)
+    const [balanceError, setBalanceError] = useState<string | null>(null)
+    const platformBalanceXlm = platformBalanceStroops === null ? "0.0000000" : stroopsToXlm(platformBalanceStroops)
+    const platformBalanceLow = platformBalanceStroops !== null && platformBalanceStroops < 10_000_000n
+
+    const refreshPlatformBalance = useCallback(async () => {
+        if (!walletAddress) {
+            setPlatformBalanceStroops(null)
+            return
+        }
+
+        try {
+            const balance = await fetchPlatformBalance({ walletAddress })
+            setPlatformBalanceStroops(balance)
+            setBalanceError(null)
+        } catch (error: unknown) {
+            setBalanceError(error instanceof Error ? error.message : "Could not load Execra balance.")
+        }
+    }, [walletAddress])
+
+    useEffect(() => {
+        void refreshPlatformBalance()
+    }, [refreshPlatformBalance])
+
+    useEffect(() => {
+        const handler = () => void refreshPlatformBalance()
+        window.addEventListener("execra-platform-balance-changed", handler)
+        return () => window.removeEventListener("execra-platform-balance-changed", handler)
+    }, [refreshPlatformBalance])
 
     const handleCopy = async () => {
         if (!walletAddress) return
@@ -36,6 +75,52 @@ export default function SettingsPage() {
         writeStoredTaskFeatureConfig(featureConfig)
         setSaveMessage("Advanced task settings saved. New tasks will use them.")
         window.setTimeout(() => setSaveMessage(null), 2400)
+    }
+
+    const handleDeposit = async () => {
+        if (!walletAddress || balancePending) return
+
+        setBalancePending(true)
+        setBalanceError(null)
+        setBalanceMessage("Depositing XLM into your Execra balance...")
+        try {
+            await depositPlatformBalance({
+                walletAddress,
+                walletProviderId,
+                amountXlm: balanceAmountXlm,
+            })
+            setBalanceMessage("Deposit submitted. Refreshing balance...")
+            await refreshPlatformBalance()
+            setBalanceMessage("Execra balance updated.")
+        } catch (error: unknown) {
+            setBalanceMessage(null)
+            setBalanceError(error instanceof Error ? error.message : "Deposit failed.")
+        } finally {
+            setBalancePending(false)
+        }
+    }
+
+    const handleWithdraw = async () => {
+        if (!walletAddress || balancePending) return
+
+        setBalancePending(true)
+        setBalanceError(null)
+        setBalanceMessage("Withdrawing XLM back to your wallet...")
+        try {
+            await withdrawPlatformBalance({
+                walletAddress,
+                walletProviderId,
+                amountXlm: balanceAmountXlm,
+            })
+            setBalanceMessage("Withdrawal submitted. Refreshing balance...")
+            await refreshPlatformBalance()
+            setBalanceMessage("Withdrawal complete.")
+        } catch (error: unknown) {
+            setBalanceMessage(null)
+            setBalanceError(error instanceof Error ? error.message : "Withdrawal failed.")
+        } finally {
+            setBalancePending(false)
+        }
     }
 
     return (
@@ -76,6 +161,57 @@ export default function SettingsPage() {
                             <Field label="Provider" value={walletProviderId ?? "Unknown"} />
                             <Field label="Balance" value={`${walletBalance ?? "0.0000000"} XLM`} />
                         </div>
+                    </section>
+
+                    <section className="rounded-[6px] border border-border bg-surface p-6">
+                        <SectionTitle title="Execra Balance" />
+
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <span className="font-heading text-2xl text-foreground">{platformBalanceXlm} XLM</span>
+                                    {platformBalanceLow && (
+                                        <span className="rounded-[3px] border border-[color:var(--ex-warning)] bg-[color:var(--ex-warning-bg)] px-2 py-1 font-heading text-[10px] uppercase tracking-[0.06em] text-[color:var(--ex-warning)]">
+                                            Low balance
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="mt-2 text-[13px] text-foreground-soft">
+                                    Task rewards are deducted from this balance without a wallet popup.
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                <input
+                                    value={balanceAmountXlm}
+                                    onChange={(event) => setBalanceAmountXlm(event.target.value)}
+                                    inputMode="decimal"
+                                    disabled={balancePending}
+                                    className="min-h-[42px] w-full rounded-[4px] border border-border bg-background px-3 font-heading text-[12px] text-foreground sm:w-36"
+                                    aria-label="Execra balance amount in XLM"
+                                />
+                                <div className="flex gap-2">
+                                    <button onClick={() => void handleDeposit()} disabled={balancePending} className="button-primary">
+                                        Deposit
+                                    </button>
+                                    <button onClick={() => void handleWithdraw()} disabled={balancePending} className="button-secondary">
+                                        Withdraw
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => void refreshPlatformBalance()}
+                                        disabled={balancePending}
+                                        className="flex min-h-[42px] min-w-[42px] items-center justify-center rounded-[4px] border border-border bg-background text-foreground-soft transition-colors hover:text-foreground disabled:opacity-60"
+                                        aria-label="Refresh Execra balance"
+                                    >
+                                        <RefreshCw size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {balanceMessage && <div className="mt-4 text-[12px] text-foreground-soft">{balanceMessage}</div>}
+                        {balanceError && <div className="mt-4 text-[12px] text-[color:var(--ex-danger)]">{balanceError}</div>}
                     </section>
 
                     <section className="rounded-[6px] border border-border bg-surface p-6">

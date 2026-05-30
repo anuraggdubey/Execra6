@@ -5,6 +5,7 @@ import { createAgentRun, createTask, failTask, updateTask } from "@/lib/services
 import { upsertUserByWallet } from "@/lib/services/userService"
 import { requireWalletAddress } from "@/lib/services/validation"
 import { previewTool } from "@/lib/tools/previewTool"
+import { verifyPendingEscrow } from "@/lib/soroban/serverEscrowVerification"
 
 export const maxDuration = 60
 
@@ -32,7 +33,15 @@ export async function POST(req: Request) {
         })
         taskId = task.id
 
-        const result = await runCodingAgent(prompt, typeof language === "string" ? language : undefined)
+        const verificationPromise = blockchain
+            ? verifyPendingEscrow({
+                walletAddress: normalizedWalletAddress,
+                agentType: "coding",
+                blockchain,
+            })
+            : Promise.resolve(null)
+        const resultPromise = runCodingAgent(prompt, typeof language === "string" ? language : undefined)
+        const [verification, result] = await Promise.all([verificationPromise, resultPromise])
         const outputResult =
             result.files
                 ? {
@@ -55,7 +64,7 @@ export async function POST(req: Request) {
             taskId,
             status: "completed",
             outputResult,
-            blockchain,
+            blockchain: verification?.blockchain ?? blockchain,
         })
         await createAgentRun(taskId, { stage: "coding-generation", status: "completed" }, Date.now() - startedAt)
 

@@ -8,6 +8,7 @@ import { upsertUserByWallet } from "@/lib/services/userService"
 import { requireEmailAddress, requireNonEmptyText, requireWalletAddress } from "@/lib/services/validation"
 import { normalizeTaskFeatureConfig, normalizeTaskFeatureState } from "@/lib/taskFeatures"
 import type { OnChainTaskStatus, TaskFeatureConfig, TaskFeatureState } from "@/types/tasks"
+import { verifyPendingEscrow } from "@/lib/soroban/serverEscrowVerification"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -113,13 +114,19 @@ export async function POST(req: Request) {
             })
             taskId = task.id
 
-            const generatedEmail = await generateEmailDraft({
+            const verificationPromise = verifyPendingEscrow({
+                walletAddress,
+                agentType: "email",
+                blockchain,
+            })
+            const generatedEmailPromise = generateEmailDraft({
                 senderEmail,
                 receiverEmail,
                 subject,
                 context,
                 tone,
             })
+            const [verification, generatedEmail] = await Promise.all([verificationPromise, generatedEmailPromise])
 
             await updateTask({
                 taskId,
@@ -132,7 +139,7 @@ export async function POST(req: Request) {
                     generatedEmail,
                     mode: "preview",
                 },
-                blockchain,
+                blockchain: verification.blockchain,
             })
             await createAgentRun(
                 taskId,

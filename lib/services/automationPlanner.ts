@@ -164,6 +164,11 @@ export async function planBrowserAutomation(instruction: string) {
         throw new AgentExecutionError("INVALID_INPUT", "instruction is required.", 400)
     }
 
+    const fallbackSteps = buildDeterministicPlan(normalizedInstruction)
+    if (fallbackSteps) {
+        return fallbackSteps
+    }
+
     const completion = await completeWithOpenRouter({
         system: [
             "You convert browser automation instructions into a strict JSON array of steps.",
@@ -186,6 +191,8 @@ export async function planBrowserAutomation(instruction: string) {
         }),
         temperature: 0.1,
         maxTokens: 600,
+        timeoutMs: 2500,
+        maxAttempts: 1,
     })
 
     try {
@@ -199,11 +206,6 @@ export async function planBrowserAutomation(instruction: string) {
         }
     } catch {
         // fall through to fallback
-    }
-
-    const fallbackSteps = buildDeterministicPlan(normalizedInstruction)
-    if (fallbackSteps) {
-        return fallbackSteps
     }
 
     throw new AgentExecutionError(

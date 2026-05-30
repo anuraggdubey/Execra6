@@ -9,7 +9,10 @@ export type TaskFeatureConfig = {
     sponsorAddress: string | null
 }
 
-export type TaskFeatureState = Record<string, never>
+export type TaskFeatureState = {
+    proofHashHex?: string | null
+    proofTxHash?: string | null
+}
 
 export type CodingTaskOutput =
     | {

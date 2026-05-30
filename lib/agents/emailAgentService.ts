@@ -60,6 +60,8 @@ export async function generateEmailDraft(input: EmailAgentInput): Promise<Genera
             ].join("\n"),
             maxTokens: 900,
             temperature: 0.4,
+            timeoutMs: 4500,
+            maxAttempts: 2,
         })
 
         return parseGeneratedEmail(raw)

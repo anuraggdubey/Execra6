@@ -34,7 +34,6 @@ export default function BrowserAgent() {
     const [error, setError] = useState<string | null>(null)
     const [txState, setTxState] = useState<string | null>(null)
     const [result, setResult] = useState<BrowserStructuredResult | null>(null)
-    const [sessionId, setSessionId] = useState<string | null>(null)
     const eventSourceRef = useRef<EventSource | null>(null)
 
     const locked = runState === "running"
@@ -78,11 +77,10 @@ export default function BrowserAgent() {
         if (!canRun) return
 
         const nextSessionId = crypto.randomUUID()
-        setSessionId(nextSessionId)
         setRunState("running")
         setError(null)
         setResult(null)
-        setTxState("Creating escrow transaction on Soroban...")
+        setTxState("Submitting escrow transaction to Soroban...")
         connectLogStream(nextSessionId)
         startAgentRun("browser", `Running browser workflow: ${instruction.trim()}`)
 
@@ -96,7 +94,7 @@ export default function BrowserAgent() {
                 agentType: "browser",
             })
 
-            setTxState(`Escrow created (TX: ${preparedTask.blockchainPayload.createTxHash.slice(0, 8)}...). Launching browser...`)
+            setTxState(`Escrow submitted (TX: ${preparedTask.blockchainPayload.createTxHash.slice(0, 8)}...). Launching browser while chain confirms...`)
             const response = await fetch("/api/agent/browser", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -114,13 +112,15 @@ export default function BrowserAgent() {
             }
 
             setResult(data.result)
-            setTxState("Finalizing escrow and confirming on-chain...")
+            setTxState("Finalizing escrow after browser run...")
 
             const finalizeResult = await finalizeEscrowedTask({
                 taskId: data.taskId,
+                agentType: "browser",
                 walletAddress: walletAddress!,
                 walletProviderId,
                 onChainTaskId: preparedTask.onChainTaskId,
+                proofPayload: data.result,
                 blockchainPayload: preparedTask.blockchainPayload,
             })
 
@@ -161,8 +161,7 @@ export default function BrowserAgent() {
             </div>
 
             <div className="space-y-5 p-3 sm:p-5">
-                <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)] xl:items-start">
-                    <div className="w-full max-w-3xl space-y-4 rounded-xl border border-border bg-surface p-3 sm:rounded-2xl sm:p-5">
+                    <div className="w-full space-y-4 rounded-xl border border-border bg-surface p-3 sm:rounded-2xl sm:p-5">
                         <div>
                             <label htmlFor="browser-agent-instruction" className="mb-2 block text-sm font-medium text-foreground">Instruction</label>
                             <textarea
@@ -209,7 +208,6 @@ export default function BrowserAgent() {
                                     setRunState("idle")
                                     setTxState(null)
                                     setResult(null)
-                                    setSessionId(null)
                                     eventSourceRef.current?.close()
                                 }}
                                 disabled={locked}
@@ -240,26 +238,6 @@ export default function BrowserAgent() {
                             </div>
                         )}
                     </div>
-
-                    <div className="hidden space-y-4 xl:sticky xl:top-4 xl:block">
-                        <div className="rounded-xl border border-border bg-surface p-4">
-                            <div className="eyebrow">Output</div>
-                            <div className="mt-1 text-sm font-semibold text-foreground">Clean result cards</div>
-                            <p className="mt-2 text-sm leading-relaxed text-foreground-soft">
-                                The browser agent now focuses on a structured final answer instead of exposing step-by-step internals.
-                            </p>
-                        </div>
-                        <div className="rounded-xl border border-border bg-surface p-4">
-                            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">Session</div>
-                            <div className="mt-2 text-sm text-foreground-soft">
-                                Status: <span className="font-semibold text-foreground">{runState === "running" ? "Active" : runState === "done" ? "Completed" : runState === "error" ? "Needs attention" : "Idle"}</span>
-                            </div>
-                            {sessionId && (
-                                <div className="mt-1 break-all text-xs text-foreground-soft">Session: {sessionId}</div>
-                            )}
-                        </div>
-                    </div>
-                </div>
 
                 <div className="space-y-4 rounded-xl border border-border bg-surface p-3 sm:rounded-2xl sm:p-5">
                     <div className="flex items-center justify-between">

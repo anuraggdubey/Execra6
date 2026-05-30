@@ -1,7 +1,15 @@
 "use client"
 
 import { buildInitialTaskFeatureState, readStoredTaskFeatureConfig } from "@/lib/taskFeatures"
-import { cancelEscrowedTask, completeEscrowedTask, createEscrowedTask, rewardXlmToStroops } from "@/lib/soroban/taskEscrowClient"
+import { buildOnChainTaskId, withProofFeatureState } from "@/lib/soroban/taskProof"
+import {
+    cancelEscrowedTask,
+    completeEscrowedTask,
+    createEscrowedTask,
+    fetchPlatformBalance,
+    rewardXlmToStroops,
+    waitForOnChainTaskStatus,
+} from "@/lib/soroban/taskEscrowClient"
 import type { AgentType } from "@/types/tasks"
 
 const LOG_PREFIX = "[lifecycle]"
@@ -16,7 +24,7 @@ export type PreparedOnChainTask = {
         featureConfig: ReturnType<typeof readStoredTaskFeatureConfig>
         featureState: ReturnType<typeof buildInitialTaskFeatureState>
     }
-    onChainTaskId: bigint
+    onChainTaskId: string
 }
 
 export async function prepareEscrowedTask(params: {
@@ -25,11 +33,16 @@ export async function prepareEscrowedTask(params: {
     rewardXlm: string
     agentType: AgentType
 }) {
-    const onChainTaskId = BigInt(Date.now())
+    const onChainTaskId = buildOnChainTaskId(params.agentType)
     const rewardStroops = rewardXlmToStroops(params.rewardXlm)
     const featureConfig = readStoredTaskFeatureConfig()
 
     console.log(LOG_PREFIX, `Preparing escrowed task: id=${onChainTaskId}, reward=${params.rewardXlm} XLM (${rewardStroops} stroops), agent=${params.agentType}`)
+
+    const platformBalance = await fetchPlatformBalance({ walletAddress: params.walletAddress })
+    if (platformBalance < rewardStroops) {
+        throw new Error("Your Execra balance is too low. Deposit more XLM to run this agent.")
+    }
 
     const receipt = await createEscrowedTask({
         walletAddress: params.walletAddress,
@@ -40,7 +53,8 @@ export async function prepareEscrowedTask(params: {
         featureConfig,
     })
 
-    console.log(LOG_PREFIX, `✓ Escrow prepared. TX: ${receipt.txHash}`)
+    window.dispatchEvent(new CustomEvent("execra-platform-balance-changed"))
+    console.log(LOG_PREFIX, `Escrow submission accepted. TX: ${receipt.txHash}`)
 
     return {
         onChainTaskId,
@@ -58,13 +72,45 @@ export async function prepareEscrowedTask(params: {
 
 export async function finalizeEscrowedTask(params: {
     taskId: string
+    agentType: AgentType
     walletAddress: string
     walletProviderId: string | null
-    onChainTaskId: bigint
+    onChainTaskId: string
+    proofPayload: unknown
     blockchainPayload: PreparedOnChainTask["blockchainPayload"]
 }): Promise<{ txHash: string }> {
     console.log(LOG_PREFIX, `Finalizing task: dbId=${params.taskId}, chainId=${params.onChainTaskId}`)
-    const featureState = { ...params.blockchainPayload.featureState }
+
+    await waitForOnChainTaskStatus({
+        taskId: params.onChainTaskId,
+        expectedStatus: "pending",
+    })
+
+    const proofResponse = await fetch("/api/tasks/submit-proof", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            onChainTaskId: params.onChainTaskId,
+            agentType: params.agentType,
+            outputResult: params.proofPayload,
+        }),
+    })
+    const proofPayload = await proofResponse.json().catch(() => ({}))
+    if (!proofResponse.ok) {
+        throw new Error(typeof proofPayload.error === "string" ? proofPayload.error : "Failed to submit task proof on-chain.")
+    }
+
+    if (typeof proofPayload.outputHashHex !== "string" || typeof proofPayload.proofTxHash !== "string") {
+        throw new Error("Task proof response was incomplete.")
+    }
+
+    const featureState = withProofFeatureState(
+        { ...params.blockchainPayload.featureState },
+        {
+            proofHashHex: proofPayload.outputHashHex,
+            proofTxHash: proofPayload.proofTxHash,
+        }
+    )
 
     const receipt = await completeEscrowedTask({
         walletAddress: params.walletAddress,
@@ -73,9 +119,11 @@ export async function finalizeEscrowedTask(params: {
         featureConfig: params.blockchainPayload.featureConfig,
         featureState,
         payExecutor: false,
+        outputHashHex: proofPayload.outputHashHex,
     })
 
-    console.log(LOG_PREFIX, `✓ On-chain completion confirmed. TX: ${receipt.txHash}. Syncing to DB…`)
+    window.dispatchEvent(new CustomEvent("execra-platform-balance-changed"))
+    console.log(LOG_PREFIX, `On-chain completion confirmed. TX: ${receipt.txHash}. Syncing to DB...`)
 
     const syncResponse = await fetch("/api/tasks/onchain-sync", {
         method: "POST",
@@ -96,9 +144,8 @@ export async function finalizeEscrowedTask(params: {
     if (!syncResponse.ok) {
         const errorBody = await syncResponse.json().catch(() => ({}))
         console.error(LOG_PREFIX, "DB sync failed:", syncResponse.status, errorBody)
-        // Don't throw — the on-chain tx succeeded, DB will catch up
     } else {
-        console.log(LOG_PREFIX, "✓ DB synced successfully.")
+        console.log(LOG_PREFIX, "DB synced successfully.")
     }
 
     return { txHash: receipt.txHash }
@@ -107,11 +154,16 @@ export async function finalizeEscrowedTask(params: {
 export async function rollbackEscrowedTask(params: {
     walletAddress: string
     walletProviderId: string | null
-    onChainTaskId: bigint
+    onChainTaskId: string
     taskId?: string
     blockchainPayload: PreparedOnChainTask["blockchainPayload"]
 }) {
     console.log(LOG_PREFIX, `Rolling back task: chainId=${params.onChainTaskId}`)
+
+    await waitForOnChainTaskStatus({
+        taskId: params.onChainTaskId,
+        expectedStatus: "pending",
+    })
 
     const receipt = await cancelEscrowedTask({
         walletAddress: params.walletAddress,
@@ -121,7 +173,8 @@ export async function rollbackEscrowedTask(params: {
         featureState: params.blockchainPayload.featureState,
     })
 
-    console.log(LOG_PREFIX, `✓ On-chain cancellation confirmed. TX: ${receipt.txHash}`)
+    window.dispatchEvent(new CustomEvent("execra-platform-balance-changed"))
+    console.log(LOG_PREFIX, `On-chain cancellation confirmed. TX: ${receipt.txHash}`)
 
     if (params.taskId) {
         const syncResponse = await fetch("/api/tasks/onchain-sync", {
@@ -144,7 +197,7 @@ export async function rollbackEscrowedTask(params: {
             const errorBody = await syncResponse.json().catch(() => ({}))
             console.error(LOG_PREFIX, "DB sync failed on rollback:", syncResponse.status, errorBody)
         } else {
-            console.log(LOG_PREFIX, "✓ DB synced (cancelled) successfully.")
+            console.log(LOG_PREFIX, "DB synced (cancelled) successfully.")
         }
     }
 }

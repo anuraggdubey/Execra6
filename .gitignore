@@ -89,5 +89,14 @@ contracts/**/*.d
 contracts/**/Cargo.lock
 .soroban/
 
+# Temporary Soroban XDR transaction files
+tmp*.xdr
+
 # Stale test files
 test-rpc.js
+
+# Gemini IDE
+.gemini/
+
+# Misc
+feedback doc/

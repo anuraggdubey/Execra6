@@ -78,6 +78,8 @@ async function summarizeResults(params: {
         }),
         temperature: 0.2,
         maxTokens: 450,
+        timeoutMs: 2500,
+        maxAttempts: 1,
     })
 
     try {

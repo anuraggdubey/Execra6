@@ -248,6 +248,8 @@ function TaskCard({ task }: { task: TaskRecord }) {
     const AgentIcon = AGENT_ICONS[task.agent_type] ?? DocumentAgentIcon
     const chainCfg = CHAIN_STATUS_LABELS[task.on_chain_status] ?? CHAIN_STATUS_LABELS.uninitialized
     const rewardXlm = task.reward_stroops ? (Number(task.reward_stroops) / 10_000_000).toFixed(7) : null
+    const proofHash = task.feature_state?.proofHashHex ?? null
+    const proofTxHash = task.feature_state?.proofTxHash ?? null
     const statusBorder =
         task.status === "completed"
             ? "var(--ex-success)"
@@ -274,9 +276,21 @@ function TaskCard({ task }: { task: TaskRecord }) {
                 {task.create_tx_hash && <TxHashLink label="Create TX" hash={task.create_tx_hash} />}
                 {task.complete_tx_hash && <TxHashLink label="Complete TX" hash={task.complete_tx_hash} />}
                 {task.cancel_tx_hash && <TxHashLink label="Cancel TX" hash={task.cancel_tx_hash} />}
+                {proofTxHash && <TxHashLink label="Proof TX" hash={proofTxHash} />}
                 {task.contract_id && <DetailItem label="Contract" value={shortenHash(task.contract_id) ?? "-"} />}
                 {task.on_chain_task_id && <DetailItem label="On-chain ID" value={task.on_chain_task_id} />}
+                {proofHash && <DetailItem label="Proof Hash" value={shortenHash(proofHash) ?? proofHash} className="text-[color:var(--ex-accent)]" />}
             </div>
+
+            {proofHash && (
+                <div className="mt-4 border border-border bg-[color:var(--ex-surface-2)] px-3 py-3">
+                    <div className="font-heading text-[10px] uppercase tracking-[0.08em] text-muted">Verified Output Proof</div>
+                    <div className="mt-2 break-all font-mono text-[11px] text-foreground-soft">{proofHash}</div>
+                    <p className="mt-2 text-[12px] leading-[1.5] text-foreground-soft">
+                        Hash the output you received and compare it with this on-chain SHA-256 proof to confirm the result was not changed after execution.
+                    </p>
+                </div>
+            )}
         </div>
     )
 }

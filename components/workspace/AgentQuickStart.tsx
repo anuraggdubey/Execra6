@@ -25,7 +25,7 @@ export default function AgentQuickStart({
     if (dismissed) return null
 
     return (
-        <section className="border-b border-border bg-surface px-6 py-3">
+        <section className="rounded-[6px] border border-border bg-surface px-4 py-4 sm:px-5">
             <div className="flex items-start justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-3">
                     <span className="font-heading text-[10px] uppercase tracking-[0.08em] text-muted">Quick Start</span>

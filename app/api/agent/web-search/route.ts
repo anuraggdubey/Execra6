@@ -51,26 +51,28 @@ export async function POST(req: Request) {
         const walletAddress = requireWalletAddress(body.walletAddress)
 
         await upsertUserByWallet(walletAddress)
-        const verification = await verifyPendingEscrow({
-            walletAddress,
-            agentType: "search",
-            blockchain: body.blockchain,
-        })
 
         const task = await createTask({
             walletAddress,
             agentType: "search",
             inputPrompt: query,
             status: "pending",
-            blockchain: verification.blockchain,
+            blockchain: body.blockchain,
         })
         taskId = task.id
 
-        const result = await runWebSearchAgent({
-            query,
-            depth,
-            includeVideos,
-        })
+        const [verification, result] = await Promise.all([
+            verifyPendingEscrow({
+                walletAddress,
+                agentType: "search",
+                blockchain: body.blockchain,
+            }),
+            runWebSearchAgent({
+                query,
+                depth,
+                includeVideos,
+            }),
+        ])
 
         await updateTask({
             taskId,

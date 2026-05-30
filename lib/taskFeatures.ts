@@ -9,7 +9,10 @@ export const DEFAULT_TASK_FEATURE_CONFIG: TaskFeatureConfig = {
     sponsorAddress: null,
 }
 
-export const DEFAULT_TASK_FEATURE_STATE: TaskFeatureState = {}
+export const DEFAULT_TASK_FEATURE_STATE: TaskFeatureState = {
+    proofHashHex: null,
+    proofTxHash: null,
+}
 
 function isWalletAddress(value: unknown): value is string {
     return typeof value === "string" && WALLET_ADDRESS_REGEX.test(value.trim())
@@ -29,8 +32,12 @@ export function normalizeTaskFeatureConfig(value: unknown): TaskFeatureConfig {
 }
 
 export function normalizeTaskFeatureState(value: unknown): TaskFeatureState {
-    void value
-    return DEFAULT_TASK_FEATURE_STATE
+    const input = value && typeof value === "object" ? value as Partial<TaskFeatureState> : {}
+
+    return {
+        proofHashHex: typeof input.proofHashHex === "string" && input.proofHashHex.trim() ? input.proofHashHex.trim().toLowerCase() : null,
+        proofTxHash: typeof input.proofTxHash === "string" && input.proofTxHash.trim() ? input.proofTxHash.trim() : null,
+    }
 }
 
 export function buildInitialTaskFeatureState(config: TaskFeatureConfig): TaskFeatureState {

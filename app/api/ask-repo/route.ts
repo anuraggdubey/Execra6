@@ -4,6 +4,7 @@ import { AgentExecutionError } from "@/lib/agents/shared"
 import { createAgentRun, createTask, failTask, updateTask } from "@/lib/services/taskService"
 import { upsertUserByWallet } from "@/lib/services/userService"
 import { requireWalletAddress } from "@/lib/services/validation"
+import { verifyPendingEscrow } from "@/lib/soroban/serverEscrowVerification"
 
 export async function POST(req: Request) {
     let taskId: string | null = null
@@ -25,12 +26,22 @@ export async function POST(req: Request) {
         })
         taskId = task.id
 
-        const answer = await askRepositoryQuestion({ owner, repo, question, context })
+        const verificationPromise = blockchain
+            ? verifyPendingEscrow({
+                walletAddress: normalizedWalletAddress,
+                agentType: "github",
+                blockchain,
+            })
+            : Promise.resolve(null)
+        const [verification, answer] = await Promise.all([
+            verificationPromise,
+            askRepositoryQuestion({ owner, repo, question, context }),
+        ])
         await updateTask({
             taskId,
             status: "completed",
             outputResult: { answer, owner, repo },
-            blockchain,
+            blockchain: verification?.blockchain ?? blockchain,
         })
         await createAgentRun(taskId, { stage: "github-question", status: "completed", owner, repo }, Date.now() - startedAt)
 

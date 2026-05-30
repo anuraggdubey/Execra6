@@ -5,6 +5,7 @@ import { readGitHubAccessToken } from "@/lib/githubAccessToken"
 import { createAgentRun, createTask, failTask, updateTask } from "@/lib/services/taskService"
 import { upsertUserByWallet } from "@/lib/services/userService"
 import { requireWalletAddress } from "@/lib/services/validation"
+import { verifyPendingEscrow } from "@/lib/soroban/serverEscrowVerification"
 
 export async function POST(req: Request) {
     let taskId: string | null = null
@@ -31,13 +32,23 @@ export async function POST(req: Request) {
         })
         taskId = task.id
 
+        const verificationPromise = blockchain
+            ? verifyPendingEscrow({
+                walletAddress: normalizedWalletAddress,
+                agentType: "github",
+                blockchain,
+            })
+            : Promise.resolve(null)
         const repoInfo = await resolveRepository({ accessToken, owner, repo })
-        const result = await fetchRepoContext({ accessToken, owner, repo, ref: ref || repoInfo.defaultBranch })
+        const [verification, result] = await Promise.all([
+            verificationPromise,
+            fetchRepoContext({ accessToken, owner, repo, ref: ref || repoInfo.defaultBranch }),
+        ])
         await updateTask({
             taskId,
             status: "completed",
             outputResult: { ...result, repo: repoInfo },
-            blockchain,
+            blockchain: verification?.blockchain ?? blockchain,
         })
         await createAgentRun(taskId, { stage: "github-index", status: "completed", owner, repo, ref }, Date.now() - startedAt)
 

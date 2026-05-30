@@ -4,6 +4,7 @@ import { AgentExecutionError } from "@/lib/agents/shared"
 import { createAgentRun, createTask, failTask, updateTask } from "@/lib/services/taskService"
 import { upsertUserByWallet } from "@/lib/services/userService"
 import { requireWalletAddress } from "@/lib/services/validation"
+import { verifyPendingEscrow } from "@/lib/soroban/serverEscrowVerification"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -46,18 +47,26 @@ export async function POST(req: Request) {
         taskId = task.id
 
         const buffer = Buffer.from(await file.arrayBuffer())
-        const result = await analyzeDocument({
+        const verificationPromise = blockchain
+            ? verifyPendingEscrow({
+                walletAddress: normalizedWalletAddress,
+                agentType: "document",
+                blockchain,
+            })
+            : Promise.resolve(null)
+        const resultPromise = analyzeDocument({
             fileName: file.name,
             mimeType: file.type,
             buffer,
             question: typeof question === "string" ? question : undefined,
         })
+        const [verification, result] = await Promise.all([verificationPromise, resultPromise])
 
         await updateTask({
             taskId,
             status: "completed",
             outputResult: result,
-            blockchain,
+            blockchain: verification?.blockchain ?? blockchain,
         })
         await createAgentRun(taskId, { stage: "document-analysis", status: "completed", fileName: file.name }, Date.now() - startedAt)
 

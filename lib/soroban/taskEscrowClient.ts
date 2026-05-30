@@ -1,5 +1,6 @@
 "use client"
 
+import { Buffer } from "buffer"
 import {
     Account,
     Address,
@@ -19,7 +20,7 @@ import type { AgentType, OnChainTaskStatus, TaskFeatureConfig, TaskFeatureState 
 export type SorobanTaskLifecycleParams = {
     walletAddress: string
     walletProviderId: string | null
-    onChainTaskId: bigint
+    onChainTaskId: string
     rewardStroops: bigint
     agentType: AgentType
     featureConfig: TaskFeatureConfig
@@ -36,7 +37,6 @@ export type SorobanTaskReceipt = {
 }
 
 const LOG_PREFIX = "[soroban]"
-
 const SOROBAN_FEE = "1000000"
 
 function getRpcServer() {
@@ -50,6 +50,12 @@ function requireSorobanSupport(walletProviderId: string | null) {
 
     if (!walletProviderId || !["freighter", "xbull", "albedo"].includes(walletProviderId)) {
         throw new Error("Use Freighter, xBull, or Albedo to sign Soroban task transactions.")
+    }
+}
+
+function requireSorobanConfig() {
+    if (!sorobanConfigured()) {
+        throw new Error("Soroban is not configured. Add the contract and RPC environment variables first.")
     }
 }
 
@@ -86,6 +92,11 @@ function extractTxError(txResponse: rpc.Api.GetTransactionResponse): string {
 export type SubmitResult = {
     txHash: string
     resultXdr: xdr.ScVal | undefined
+}
+
+type WaitForStatusOptions = {
+    timeoutMs?: number
+    pollMs?: number
 }
 
 function normalizeOnChainTaskStatus(value: unknown): OnChainTaskStatus | null {
@@ -125,7 +136,7 @@ function normalizeOnChainTaskStatus(value: unknown): OnChainTaskStatus | null {
     return null
 }
 
-async function reconcileTaskStatus(params: { taskId: bigint; expectedStatus: OnChainTaskStatus }) {
+async function reconcileTaskStatus(params: { taskId: string; expectedStatus: OnChainTaskStatus }) {
     try {
         const task = await fetchOnChainTask({ taskId: params.taskId })
         const actualStatus = normalizeOnChainTaskStatus(task)
@@ -144,7 +155,7 @@ async function reconcileTaskStatus(params: { taskId: bigint; expectedStatus: OnC
     return null
 }
 
-async function pollTransactionConfirmation(server: rpc.Server, txHash: string, params: { confirmationTaskId?: bigint; expectedTaskStatus?: OnChainTaskStatus }) {
+async function pollTransactionConfirmation(server: rpc.Server, txHash: string, params: { confirmationTaskId?: string; expectedTaskStatus?: OnChainTaskStatus }) {
     const pollDelays = [500, 500, 1000, 1000, 1000, 1500, 1500, 1500, 2000, 2000, 2000, 2000, 2500, 2500, 2500, 3000, 3000]
     let elapsed = 0
 
@@ -194,6 +205,15 @@ async function pollTransactionConfirmation(server: rpc.Server, txHash: string, p
     )
 }
 
+function bytesNScValFromHex(hex: string) {
+    const normalized = hex.trim().toLowerCase()
+    if (!/^[0-9a-f]{64}$/.test(normalized)) {
+        throw new Error("Proof hash must be a 32-byte hex string.")
+    }
+
+    return xdr.ScVal.scvBytes(Buffer.from(normalized, "hex"))
+}
+
 async function submitSignedTransaction(params: {
     server: rpc.Server
     signedXdr: string
@@ -232,8 +252,9 @@ async function submitContractInvocation(params: {
     featureConfig: TaskFeatureConfig
     functionName: string
     args: xdr.ScVal[]
-    confirmationTaskId?: bigint
+    confirmationTaskId?: string
     expectedTaskStatus?: OnChainTaskStatus
+    skipConfirmation?: boolean
 }): Promise<SubmitResult> {
     const server = getRpcServer()
     const sourceAccount = await server.getAccount(params.walletAddress)
@@ -277,8 +298,15 @@ async function submitContractInvocation(params: {
         return { txHash, resultXdr: undefined }
     }
 
+    if (params.skipConfirmation) {
+        return { txHash, resultXdr: undefined }
+    }
+
     return pollTransactionConfirmation(server, txHash, params)
 }
+
+/** The only supported token for task escrow payments. */
+export type SupportedTaskToken = "XLM"
 
 export function rewardXlmToStroops(rewardXlm: string) {
     const trimmed = rewardXlm.trim()
@@ -291,31 +319,113 @@ export function rewardXlmToStroops(rewardXlm: string) {
     return BigInt(whole) * 10_000_000n + BigInt(normalizedFraction)
 }
 
-export async function createEscrowedTask(params: SorobanTaskLifecycleParams): Promise<SorobanTaskReceipt> {
+export function stroopsToXlm(stroops: bigint | string | number) {
+    const value = BigInt(stroops)
+    const whole = value / 10_000_000n
+    const fraction = (value % 10_000_000n).toString().padStart(7, "0")
+    return `${whole}.${fraction}`
+}
+
+/**
+ * Convert a reward amount to stroops for the given token.
+ * Only XLM is supported — this is a convenience alias for rewardXlmToStroops.
+ */
+export function rewardTokenToStroops(amount: string, _token: SupportedTaskToken = "XLM") {
+    void _token
+    return rewardXlmToStroops(amount)
+}
+
+export async function fetchPlatformBalance(params: { walletAddress: string }) {
+    requireSorobanConfig()
+    const server = getRpcServer()
+    const sourceAccount = new Account("GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF", "0")
+    const tx = new TransactionBuilder(sourceAccount, {
+        fee: SOROBAN_FEE,
+        networkPassphrase: getNetworkPassphrase(),
+    })
+        .addOperation(
+            Operation.invokeContractFunction({
+                contract: SOROBAN_CONFIG.contractId,
+                function: "get_balance",
+                args: [new Address(params.walletAddress).toScVal()],
+            })
+        )
+        .setTimeout(60)
+        .build()
+
+    const simulation = await server.simulateTransaction(tx) as { result?: { retval?: xdr.ScVal } }
+    if (!simulation.result?.retval) {
+        throw new Error("No platform balance returned from contract")
+    }
+
+    return BigInt(scValToNative(simulation.result.retval))
+}
+
+export async function depositPlatformBalance(params: {
+    walletAddress: string
+    walletProviderId: string | null
+    amountXlm: string
+}) {
     requireSorobanSupport(params.walletProviderId)
+    const amountStroops = rewardXlmToStroops(params.amountXlm)
+
+    return submitContractInvocation({
+        walletAddress: params.walletAddress,
+        walletProviderId: params.walletProviderId as SupportedWalletId | null,
+        featureConfig: normalizeTaskFeatureConfig({}),
+        functionName: "deposit",
+        args: [
+            new Address(params.walletAddress).toScVal(),
+            nativeToScVal(amountStroops, { type: "i128" }),
+        ],
+    })
+}
+
+export async function withdrawPlatformBalance(params: {
+    walletAddress: string
+    walletProviderId: string | null
+    amountXlm: string
+}) {
+    requireSorobanSupport(params.walletProviderId)
+    const amountStroops = rewardXlmToStroops(params.amountXlm)
+
+    return submitContractInvocation({
+        walletAddress: params.walletAddress,
+        walletProviderId: params.walletProviderId as SupportedWalletId | null,
+        featureConfig: normalizeTaskFeatureConfig({}),
+        functionName: "withdraw",
+        args: [
+            new Address(params.walletAddress).toScVal(),
+            nativeToScVal(amountStroops, { type: "i128" }),
+        ],
+    })
+}
+
+export async function createEscrowedTask(params: SorobanTaskLifecycleParams): Promise<SorobanTaskReceipt> {
+    requireSorobanConfig()
     const featureConfig = normalizeTaskFeatureConfig(params.featureConfig)
     const featureState = buildInitialTaskFeatureState(featureConfig)
 
-    const receipt = await submitContractInvocation({
-        walletAddress: params.walletAddress,
-        walletProviderId: params.walletProviderId as SupportedWalletId | null,
-        featureConfig,
-        functionName: "create_task",
-        args: [
-            nativeToScVal(params.onChainTaskId, { type: "u64" }),
-            new Address(params.walletAddress).toScVal(),
-            symbolScVal(params.agentType),
-            nativeToScVal(params.rewardStroops, { type: "i128" }),
-        ],
-        confirmationTaskId: params.onChainTaskId,
-        expectedTaskStatus: "pending",
+    const response = await fetch("/api/soroban/create-task", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            walletAddress: params.walletAddress,
+            onChainTaskId: params.onChainTaskId,
+            agentType: params.agentType,
+            rewardStroops: params.rewardStroops.toString(),
+        }),
     })
+    const payload = await response.json().catch(() => ({}))
+    if (!response.ok) {
+        throw new Error(typeof payload.error === "string" ? payload.error : "Your Execra balance is too low. Deposit more XLM to run this agent.")
+    }
 
     return {
         contractId: SOROBAN_CONFIG.contractId,
         onChainTaskId: params.onChainTaskId.toString(),
         rewardStroops: params.rewardStroops.toString(),
-        txHash: receipt.txHash,
+        txHash: typeof payload.txHash === "string" ? payload.txHash : "",
         onChainStatus: "pending",
         featureConfig,
         featureState,
@@ -327,10 +437,11 @@ export const createTaskOnChain = createEscrowedTask
 export async function completeEscrowedTask(params: {
     walletAddress: string
     walletProviderId: string | null
-    onChainTaskId: bigint
+    onChainTaskId: string
     featureConfig: TaskFeatureConfig
     featureState: TaskFeatureState
     payExecutor?: boolean
+    outputHashHex: string
 }): Promise<SorobanTaskReceipt> {
     requireSorobanSupport(params.walletProviderId)
     const featureConfig = normalizeTaskFeatureConfig(params.featureConfig)
@@ -341,9 +452,10 @@ export async function completeEscrowedTask(params: {
         featureConfig,
         functionName: "complete_task",
         args: [
-            nativeToScVal(params.onChainTaskId, { type: "u64" }),
+            symbolScVal(params.onChainTaskId),
             new Address(params.walletAddress).toScVal(),
             nativeToScVal(Boolean(params.payExecutor), { type: "bool" }),
+            bytesNScValFromHex(params.outputHashHex),
         ],
         confirmationTaskId: params.onChainTaskId,
         expectedTaskStatus: "completed",
@@ -365,7 +477,7 @@ export const completeTaskOnChain = completeEscrowedTask
 export async function cancelEscrowedTask(params: {
     walletAddress: string
     walletProviderId: string | null
-    onChainTaskId: bigint
+    onChainTaskId: string
     featureConfig: TaskFeatureConfig
     featureState: TaskFeatureState
 }): Promise<SorobanTaskReceipt> {
@@ -378,7 +490,7 @@ export async function cancelEscrowedTask(params: {
         featureConfig,
         functionName: "cancel_task",
         args: [
-            nativeToScVal(params.onChainTaskId, { type: "u64" }),
+            symbolScVal(params.onChainTaskId),
             new Address(params.walletAddress).toScVal(),
         ],
         confirmationTaskId: params.onChainTaskId,
@@ -398,7 +510,7 @@ export async function cancelEscrowedTask(params: {
 
 export const cancelTaskOnChain = cancelEscrowedTask
 
-export async function fetchOnChainTask(params: { taskId: bigint }) {
+export async function fetchOnChainTask(params: { taskId: string }) {
     const server = getRpcServer()
     const sourceAccount = new Account("GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF", "0")
     const tx = new TransactionBuilder(sourceAccount, {
@@ -409,7 +521,7 @@ export async function fetchOnChainTask(params: { taskId: bigint }) {
             Operation.invokeContractFunction({
                 contract: SOROBAN_CONFIG.contractId,
                 function: "get_task",
-                args: [nativeToScVal(params.taskId, { type: "u64" })],
+                args: [symbolScVal(params.taskId)],
             })
         )
         .setTimeout(60)
@@ -421,4 +533,35 @@ export async function fetchOnChainTask(params: { taskId: bigint }) {
     }
 
     return scValToNative(simulation.result.retval)
+}
+
+export async function waitForOnChainTaskStatus(
+    params: { taskId: string; expectedStatus: OnChainTaskStatus } & WaitForStatusOptions
+) {
+    const timeoutMs = params.timeoutMs ?? 25_000
+    const pollMs = params.pollMs ?? 750
+    const startedAt = Date.now()
+    let lastError: unknown = null
+
+    while (Date.now() - startedAt < timeoutMs) {
+        try {
+            const task = await fetchOnChainTask({ taskId: params.taskId })
+            const actualStatus = normalizeOnChainTaskStatus(task)
+            if (actualStatus === params.expectedStatus) {
+                return task
+            }
+        } catch (error: unknown) {
+            lastError = error
+        }
+
+        await sleep(pollMs)
+    }
+
+    if (lastError instanceof Error) {
+        throw lastError
+    }
+
+    throw new Error(
+        `Task ${params.taskId} did not reach ${params.expectedStatus} within ${Math.round(timeoutMs / 1000)}s.`
+    )
 }

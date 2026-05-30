@@ -5,12 +5,14 @@ edition = "2021"
 publish = false
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 soroban-sdk = "22.0.4"
 
 [dev-dependencies]
+agent_registry = { path = "../agent_registry" }
+task_proof = { path = "../task_proof" }
 soroban-sdk = { version = "22.0.4", features = ["testutils"] }
 
 [profile.release]
