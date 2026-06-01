@@ -25,6 +25,7 @@
 # Environment files and secrets
 .env
 .env.*
+env.example
 .env.local
 .env.mainnet
 .env.development.local
@@ -91,7 +92,7 @@ Thumbs.db
 .idea/
 
 # Deployment
-.vercel
+.vercel/
 
 # Supabase local state
 supabase/.temp/
@@ -107,8 +108,11 @@ contracts/**/*.wasm
 contracts/**/*.d
 contracts/**/Cargo.lock
 .soroban/
+.stellar/
 
-# Temporary Soroban XDR transaction files
+# Local-only chain deployment manifests and transaction files
+contracts.*.local.json
+contracts.local.json
 tmp*.xdr
 *.xdr
 *.tx
