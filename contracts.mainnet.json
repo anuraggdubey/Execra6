@@ -1,0 +1,26 @@
+{
+  "network": "mainnet",
+  "rpcUrl": "https://rpc.lightsail.network",
+  "deployer": "GCBUI4DWP2ILEL4QHANJUGE3B5KGEJ2SQIL65I2X44EUXIGL7WJ532WD",
+  "xlmSacId": "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA",
+  "agent_registry": "CAVJ7EW6WBZN6VKU7TVRJYTOL7RZ3DNZC2NQEAWMILLXMIFJ2FRHV2QC",
+  "task_escrow": "CAUTH4R5HX44DS45W24HCZOPUE6LXA3DU6EKQU32IOB6QZ3AKZ4YE43O",
+  "task_proof": "CCBEH4ERGUYIUA44MOFPGZH67LD7MK7KFK6DDZL4FEIR2CPGDXISD3PQ",
+  "spendBaselineXlm": 71,
+  "setup": {
+    "agent_registry_init": true,
+    "task_escrow_init": true,
+    "task_proof_init": true,
+    "set_registry": true,
+    "set_proof_contract": true,
+    "authorize_registry_caller": true,
+    "authorize_proof_executor": true,
+    "authorize_escrow_executor": true,
+    "register_github_agent": true,
+    "register_coding_agent": true,
+    "register_document_agent": true,
+    "register_email_agent": true,
+    "register_websearch_agent": true,
+    "register_browser_agent": true
+  }
+}

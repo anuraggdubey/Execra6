@@ -6,6 +6,7 @@ import { createAgentRun, createTask, failTask, updateTask } from "@/lib/services
 import { upsertUserByWallet } from "@/lib/services/userService"
 import { requireNonEmptyText, requireWalletAddress } from "@/lib/services/validation"
 import { verifyPendingEscrow } from "@/lib/soroban/serverEscrowVerification"
+import type { EscrowBlockchainPayload } from "@/lib/soroban/serverEscrowVerification"
 
 export const runtime = "nodejs"
 export const maxDuration = 300
@@ -14,7 +15,7 @@ type BrowserRouteBody = {
     instruction?: unknown
     sessionId?: unknown
     walletAddress?: unknown
-    blockchain?: unknown
+    blockchain?: EscrowBlockchainPayload
 }
 
 function requireSessionId(value: unknown) {

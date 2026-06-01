@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { AgentExecutionError } from "@/lib/agents/shared"
 import { runWebSearchAgent } from "@/lib/agents/webSearchAgentService"
 import { verifyPendingEscrow } from "@/lib/soroban/serverEscrowVerification"
+import type { EscrowBlockchainPayload } from "@/lib/soroban/serverEscrowVerification"
 import { createAgentRun, createTask, failTask, updateTask } from "@/lib/services/taskService"
 import { upsertUserByWallet } from "@/lib/services/userService"
 import { requireNonEmptyText, requireWalletAddress } from "@/lib/services/validation"
@@ -15,7 +16,7 @@ type WebSearchRouteBody = {
     depth?: unknown
     includeVideos?: unknown
     walletAddress?: unknown
-    blockchain?: unknown
+    blockchain?: EscrowBlockchainPayload
 }
 
 function requireDepth(value: unknown): SearchDepth {

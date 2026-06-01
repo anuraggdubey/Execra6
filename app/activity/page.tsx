@@ -40,7 +40,8 @@ function shortenHash(hash: string | null) {
 }
 
 function explorerUrl(hash: string) {
-    return `https://stellar.expert/explorer/testnet/tx/${hash}`
+    const network = process.env.NEXT_PUBLIC_SOROBAN_NETWORK === "mainnet" ? "public" : "testnet"
+    return `https://stellar.expert/explorer/${network}/tx/${hash}`
 }
 
 function readStoredWalletAddress() {

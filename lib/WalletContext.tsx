@@ -13,7 +13,7 @@ import {
     connectStellarWallet,
     disconnectStellarWallet,
     extractWalletError,
-    fetchStellarTestnetBalance,
+    fetchStellarBalance,
     getSupportedStellarWallets,
     type SupportedStellarWallet,
     type SupportedWalletId,
@@ -174,7 +174,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
         setIsBalanceLoading(true)
         try {
-            const balance = await fetchStellarTestnetBalance(walletAddress)
+            const balance = await fetchStellarBalance(walletAddress)
             setWalletBalance(balance)
         } catch (error) {
             console.error("[wallet] Failed to refresh balance", error)
@@ -207,7 +207,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             writeWalletSession(session)
             await persistWalletUser(session.walletAddress)
 
-            const balance = await fetchStellarTestnetBalance(session.walletAddress)
+            const balance = await fetchStellarBalance(session.walletAddress)
             setWalletBalance(balance)
         } catch (error) {
             const message = extractWalletError(error)

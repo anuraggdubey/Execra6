@@ -273,7 +273,7 @@ export default function SettingsPage() {
             ) : (
                 <section className="rounded-[6px] border border-border bg-surface p-6">
                     <p className="text-sm text-foreground-soft">
-                        No wallet connected. Connect a Stellar testnet wallet to enable agent actions.
+                        No wallet connected. Connect a Stellar wallet to enable agent actions.
                     </p>
                     <div className="mt-4">
                         <ConnectWalletButton className="button-primary w-full" />

@@ -195,8 +195,14 @@ export async function disconnectStellarWallet() {
     return
 }
 
-export async function fetchStellarTestnetBalance(walletAddress: string) {
-    const response = await fetch(`https://horizon-testnet.stellar.org/accounts/${walletAddress}`, {
+function getHorizonUrl() {
+    return process.env.NEXT_PUBLIC_SOROBAN_NETWORK === "mainnet"
+        ? "https://horizon.stellar.org"
+        : "https://horizon-testnet.stellar.org"
+}
+
+export async function fetchStellarBalance(walletAddress: string) {
+    const response = await fetch(`${getHorizonUrl()}/accounts/${walletAddress}`, {
         cache: "no-store",
     })
 
@@ -205,7 +211,7 @@ export async function fetchStellarTestnetBalance(walletAddress: string) {
     }
 
     if (!response.ok) {
-        throw new Error("Unable to load Stellar testnet balance")
+        throw new Error("Unable to load Stellar balance")
     }
 
     const account = await response.json()

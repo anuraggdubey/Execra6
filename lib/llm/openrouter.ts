@@ -54,16 +54,20 @@ export async function completeWithOpenRouter(options: {
 
     for (const model of models) {
         try {
-            const completion = await client.chat.completions.create({
-                model,
-                messages: [
-                    { role: "system", content: options.system },
-                    { role: "user", content: options.user },
-                ],
-                max_tokens: options.maxTokens ?? 1500,
-                temperature: options.temperature ?? 0.4,
-                timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-            })
+            const completion = await client.chat.completions.create(
+                {
+                    model,
+                    messages: [
+                        { role: "system", content: options.system },
+                        { role: "user", content: options.user },
+                    ],
+                    max_tokens: options.maxTokens ?? 1500,
+                    temperature: options.temperature ?? 0.4,
+                },
+                {
+                    timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+                }
+            )
 
             const content = completion.choices[0]?.message?.content?.trim()
             if (!content) {

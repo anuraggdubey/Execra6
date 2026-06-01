@@ -200,8 +200,9 @@ async function pollTransactionConfirmation(server: rpc.Server, txHash: string, p
         }
     }
 
+    const explorerNetwork = SOROBAN_CONFIG.network === "mainnet" ? "public" : "testnet"
     throw new Error(
-        `Transaction not confirmed after ${Math.round(elapsed / 1000)}s. Check Stellar explorer: https://stellar.expert/explorer/testnet/tx/${txHash}`
+        `Transaction not confirmed after ${Math.round(elapsed / 1000)}s. Check Stellar explorer: https://stellar.expert/explorer/${explorerNetwork}/tx/${txHash}`
     )
 }
 

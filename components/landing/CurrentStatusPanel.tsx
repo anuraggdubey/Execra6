@@ -24,6 +24,8 @@ export default function CurrentStatusPanel({
     lastActivity,
 }: CurrentStatusPanelProps) {
     const hasError = Boolean(lastActivity && /error|failed|invalid|unable/i.test(lastActivity))
+    const networkLabel = process.env.NEXT_PUBLIC_SOROBAN_NETWORK === "mainnet" ? "MAINNET" : "TESTNET"
+    const stellarNetworkLabel = process.env.NEXT_PUBLIC_SOROBAN_NETWORK === "mainnet" ? "Stellar Mainnet" : "Stellar Testnet"
 
     return (
         <aside className="h-full bg-surface px-8 py-8">
@@ -34,7 +36,7 @@ export default function CurrentStatusPanel({
                         {[
                             ["WORKSPACE", "READY"],
                             ["WALLET", walletAddress ? "CONNECTED" : "DISCONNECTED"],
-                            ["NETWORK", "TESTNET"],
+                            ["NETWORK", networkLabel],
                         ].map(([label, value], index) => (
                             <div key={label} className={`contents ${index < 2 ? "[&>*]:border-b" : ""}`}>
                                 <div className="border-border py-2 font-heading tracking-[0.02em] text-muted">{label}</div>
@@ -65,7 +67,7 @@ export default function CurrentStatusPanel({
                             <StatusDot tone={walletAddress ? "success" : "warning"} />
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="font-sans text-[12px] text-foreground-soft">Stellar Testnet</span>
+                            <span className="font-sans text-[12px] text-foreground-soft">{stellarNetworkLabel}</span>
                             <StatusDot tone="success" />
                         </div>
                         <div className="flex items-center justify-between">

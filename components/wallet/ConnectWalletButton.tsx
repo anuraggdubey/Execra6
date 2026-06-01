@@ -27,6 +27,7 @@ export default function ConnectWalletButton({
     } = useWalletContext()
     const [open, setOpen] = useState(false)
     const [localError, setLocalError] = useState<string | null>(null)
+    const networkLabel = process.env.NEXT_PUBLIC_SOROBAN_NETWORK === "mainnet" ? "Stellar Mainnet" : "Stellar Testnet"
 
     const actionLabel = walletAddress ? shortWalletAddress ?? "Wallet Connected" : label
 
@@ -45,7 +46,7 @@ export default function ConnectWalletButton({
                     <div className="panel w-full max-w-lg overflow-hidden">
                         <div className="flex items-center justify-between border-b border-border px-5 py-4">
                             <div>
-                                <div className="eyebrow">Stellar Testnet</div>
+                                <div className="eyebrow">{networkLabel}</div>
                                 <div className="mt-1 text-lg font-semibold text-foreground">Connect your wallet</div>
                             </div>
                             <button onClick={() => setOpen(false)} className="button-ghost h-10 w-10 rounded-full p-0" aria-label="Close wallet modal">

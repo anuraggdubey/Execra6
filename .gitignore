@@ -26,12 +26,26 @@
 .env
 .env.*
 .env.local
+.env.mainnet
 .env.development.local
 .env.test.local
 .env.production.local
 !.env.example
 !.env*.example
 .env*.local
+*.secret
+*.secrets
+*.secret.*
+*.secrets.*
+secrets/
+.secrets/
+credentials/
+.credentials/
+service-account*.json
+*-service-account.json
+*private-key*
+*secret-key*
+*seed*
 
 # Local credential/config files
 .npmrc
@@ -41,9 +55,14 @@
 # Certificates and keys
 *.pem
 *.key
+*.pub
 *.crt
 *.p12
 *.pfx
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
 
 # Logs and local diagnostics
 *.log
@@ -91,6 +110,10 @@ contracts/**/Cargo.lock
 
 # Temporary Soroban XDR transaction files
 tmp*.xdr
+*.xdr
+*.tx
+*.txn
+*.soroban.json
 
 # Stale test files
 test-rpc.js

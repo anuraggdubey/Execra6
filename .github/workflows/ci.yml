@@ -19,14 +19,27 @@ jobs:
     env:
       APP_URL: http://localhost:3001
       OPENAI_API_KEY: ci-placeholder
+      OPENROUTER_API_KEY: ci-placeholder
+      OPENROUTER_MODEL: openai/gpt-4o-mini
+      GITHUB_CLIENT_ID: ci-placeholder
+      GITHUB_CLIENT_SECRET: ci-placeholder
+      GITHUB_OAUTH_CALLBACK_URL: http://localhost:3001/api/auth/github/callback
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
       SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
-      NEXT_PUBLIC_SOROBAN_CONTRACT_ID: CA6MESAPUDXH4AJJY45WRYWBX4EIQL7XOY3XKC3WZZXCNIDGGHSC2GKB
-      NEXT_PUBLIC_SOROBAN_NETWORK: testnet
-      NEXT_PUBLIC_SOROBAN_RPC_URL: https://soroban-testnet.stellar.org
-      NEXT_PUBLIC_SOROBAN_NETWORK_PASSPHRASE: Test SDF Network ; September 2015
-      NEXT_PUBLIC_STELLAR_XLM_SAC_ID: CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
+      NEXT_PUBLIC_SOROBAN_CONTRACT_ID: CAUTH4R5HX44DS45W24HCZOPUE6LXA3DU6EKQU32IOB6QZ3AKZ4YE43O
+      NEXT_PUBLIC_SOROBAN_PROOF_CONTRACT_ID: CCBEH4ERGUYIUA44MOFPGZH67LD7MK7KFK6DDZL4FEIR2CPGDXISD3PQ
+      NEXT_PUBLIC_SOROBAN_NETWORK: mainnet
+      NEXT_PUBLIC_SOROBAN_RPC_URL: https://rpc.lightsail.network
+      NEXT_PUBLIC_SOROBAN_NETWORK_PASSPHRASE: Public Global Stellar Network ; September 2015
+      NEXT_PUBLIC_STELLAR_XLM_SAC_ID: CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA
+      SOROBAN_PROOF_CONTRACT_ID: CCBEH4ERGUYIUA44MOFPGZH67LD7MK7KFK6DDZL4FEIR2CPGDXISD3PQ
+      SOROBAN_SPONSOR_SECRET: ci-placeholder
+      SOROBAN_PROOF_EXECUTOR_SECRET: ci-placeholder
+      EMAIL_USER: ci@example.com
+      EMAIL_PASS: ci-placeholder
+      EMAIL_FROM: ci@example.com
+      SERPAPI_API_KEY: ci-placeholder
 
     steps:
       - name: Checkout repository
@@ -49,7 +62,10 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: contracts/task_escrow
+          workspaces: |
+            contracts/task_escrow
+            contracts/task_proof
+            contracts/agent_registry
 
       - name: Run ESLint
         run: npm run lint
@@ -57,6 +73,14 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Run Soroban contract tests
+      - name: Run task escrow contract tests
         working-directory: contracts/task_escrow
+        run: cargo test
+
+      - name: Run task proof contract tests
+        working-directory: contracts/task_proof
+        run: cargo test
+
+      - name: Run agent registry contract tests
+        working-directory: contracts/agent_registry
         run: cargo test
