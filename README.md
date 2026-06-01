@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="./Screenshots/logo2.png" alt="Execra" width="160" />
-</p>
-
 <h1 align="center">Execra</h1>
 
 <p align="center">
@@ -9,8 +5,8 @@
 </p>
 
 <p align="center">
-  <a href="https://execra6.vercel.app"><img src="https://img.shields.io/badge/🚀_Live_App-execra6.vercel.app-6366f1?style=for-the-badge" alt="Live App" /></a>
-  <a href="https://drive.google.com/file/d/1UlANTTOKPK3bu8j2Bnh0_d_xY3OQfL0B/view?usp=sharing"><img src="https://img.shields.io/badge/🎬_Video_Demo-Watch-ef4444?style=for-the-badge" alt="Video Demo" /></a>
+  <a href="https://execra6.vercel.app"><img src="https://img.shields.io/badge/Live_App-execra6.vercel.app-6366f1?style=for-the-badge" alt="Live App" /></a>
+  <a href="https://drive.google.com/file/d/132Ytp7MAAFrD0tT_ImFpnWWJR07I_voK/view?usp=drive_link"><img src="https://img.shields.io/badge/Demo-Video-111827?style=for-the-badge" alt="Demo Video" /></a>
 </p>
 
 <p align="center">
@@ -25,58 +21,86 @@
 
 ---
 
-## ✨ What is Execra?
+## What is Execra?
 
-Execra is an **escrow-backed AI agent platform** where every task runs through a Soroban smart contract on the Stellar testnet. Connect your wallet, pick an agent, and execute — with on-chain proof for every action.
+Execra is an **escrow-backed AI agent platform** where every task runs through Soroban smart contracts on Stellar Mainnet. Connect your wallet, pick an agent, and execute with on-chain escrow and proof tracking for every action.
 
-The advanced feature in this version is **Fee Sponsorship**: user-signed Soroban transactions are relayed through a sponsor-paid fee bump flow, removing the gas cost barrier for end users.
+The platform is wallet-first: task payments are created from the connected user's wallet, while optional fee sponsorship can be enabled only when a separate sponsor account is configured.
 
 ---
 
-## 🤖 Six Agents, One Surface
+## Six Agents, One Surface
 
 | Agent | What it does |
 |:---:|:---|
-| 🐙 **GitHub** | Connect repos, index source code, review architecture & generate focused summaries |
-| 💻 **Coding** | Generate MVP-ready code artifacts with live preview & downloadable bundles |
-| 📄 **Document** | Parse PDFs, CSVs, JSON files into concise analysis your team can act on |
-| 📧 **Email** | Draft and send escrow-backed emails through a configured mailbox |
-| 🔍 **Web Search** | Run live web research with source-backed summaries and related content |
-| 🌐 **Browser** | Control a visible browser session and stream live execution logs |
+| **GitHub** | Connect repos, index source code, review architecture, and generate focused summaries |
+| **Coding** | Generate MVP-ready code artifacts with live preview and downloadable bundles |
+| **Document** | Parse PDFs, CSVs, JSON files into concise analysis your team can act on |
+| **Email** | Draft and send escrow-backed emails through a configured mailbox |
+| **Web Search** | Run live web research with source-backed summaries and related content |
+| **Browser** | Control a visible browser session and stream live execution logs |
 
 ---
 
-## 📸 Screenshots
+## Platform Features
+
+- Stellar Mainnet escrow for agent tasks through Soroban contracts
+- On-chain proof submission and task status sync
+- Wallet support for Freighter, xBull, and Albedo
+- Supabase-backed users, task history, agent runs, and dashboard metrics
+- GitHub OAuth flow for repository analysis
+- Live browser automation sessions with streamed progress events
+- Generated code previews and downloadable project bundles
+- Optional fee sponsorship flow for deployments that choose to subsidize network fees
+
+---
+
+## Mainnet Contracts
+
+| Contract | Address |
+|:---|:---|
+| Agent Registry | `CAVJ7EW6WBZN6VKU7TVRJYTOL7RZ3DNZC2NQEAWMILLXMIFJ2FRHV2QC` |
+| Task Escrow | `CAUTH4R5HX44DS45W24HCZOPUE6LXA3DU6EKQU32IOB6QZ3AKZ4YE43O` |
+| Task Proof | `CCBEH4ERGUYIUA44MOFPGZH67LD7MK7KFK6DDZL4FEIR2CPGDXISD3PQ` |
+| Native XLM SAC | `CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA` |
+
+Network: Stellar Mainnet  
+RPC: `https://rpc.lightsail.network`  
+Deployer: `GCBUI4DWP2ILEL4QHANJUGE3B5KGEJ2SQIL65I2X44EUXIGL7WJ532WD`
+
+---
+
+## Screenshots
 
 <p align="center">
   <img src="./Screenshots/agents.png" alt="Agent Workspace" width="720" />
   <br/>
-  <em>Agent workspace — clean, focused, minimal</em>
+  <em>Agent workspace - clean, focused, minimal</em>
 </p>
 
 <p align="center">
   <img src="./Screenshots/metricsdash.png" alt="Metrics Dashboard" width="720" />
   <br/>
-  <em>Dashboard — platform metrics & task monitoring</em>
+  <em>Dashboard - platform metrics and task monitoring</em>
 </p>
 
 ---
 
-## 🏗️ Tech Stack
+## Tech Stack
 
 ```
-Frontend       Next.js 16 · React 19 · TypeScript 5
-Styling        Tailwind CSS 4 · Custom design tokens
-Backend        Supabase · Next.js API routes · Express
-Blockchain     Soroban smart contracts · Stellar SDK 14
+Frontend       Next.js 16 / React 19 / TypeScript 5
+Styling        Tailwind CSS 4 / Custom design tokens
+Backend        Supabase / Next.js API routes / Express
+Blockchain     Soroban smart contracts / Stellar SDK 14
 AI Engine      OpenRouter / OpenAI-compatible models
-Automation     Playwright (server-side Chromium)
-Contract       Rust (task_escrow)
+Automation     Playwright server-side Chromium
+Contracts      Rust: agent_registry / task_escrow / task_proof
 ```
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Clone
@@ -87,25 +111,24 @@ cd Execra6
 npm install
 
 # Configure environment
-cp .env.local.example .env.local
-# → Fill in Supabase, OpenRouter, Stellar keys
+# Fill in Supabase, AI/search, GitHub OAuth, email, and Stellar Mainnet keys
 
 # Run
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and connect a Stellar testnet wallet.
+Open [http://localhost:3001](http://localhost:3001) and connect a Stellar Mainnet wallet.
 
 ---
 
-## 🔐 Advanced Feature — Fee Sponsorship
+## Advanced Feature - Fee Sponsorship
 
-> User-signed Soroban transactions are wrapped in a sponsor-paid fee bump and submitted to Stellar testnet — **zero gas costs for end users**.
+> User-signed Soroban transactions can be wrapped in a sponsor-paid fee bump and submitted to Stellar Mainnet when a sponsor account is configured.
 
 **How it works:**
 
 ```
-User signs tx  →  POST /api/soroban/sponsor  →  Sponsor wraps in fee bump  →  Submitted to testnet
+User signs tx -> POST /api/soroban/sponsor -> Sponsor wraps in fee bump -> Submitted to mainnet
 ```
 
 **Key files:**
@@ -120,7 +143,7 @@ User signs tx  →  POST /api/soroban/sponsor  →  Sponsor wraps in fee bump  �
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Execra6/
@@ -128,7 +151,7 @@ Execra6/
 ├── app/
 │   ├── agents/            Agent workspace
 │   ├── activity/          Execution history
-│   ├── dashboard/         Metrics & monitoring
+│   ├── dashboard/         Metrics and monitoring
 │   ├── settings/          Fee sponsorship config
 │   └── api/               Backend routes
 ├── components/
@@ -138,53 +161,55 @@ Execra6/
 │   ├── wallet/            Wallet connection
 │   └── workspace/         Shared workspace UI
 ├── contracts/
-│   └── task_escrow/       Soroban smart contract (Rust)
+│   ├── agent_registry/    Soroban registry contract
+│   ├── task_escrow/       Soroban escrow contract
+│   └── task_proof/        Soroban proof contract
 ├── lib/
 │   ├── soroban/           On-chain integration
-│   └── wallet/            Wallet providers & session
-├── supabase/              Schema & migrations
+│   └── wallet/            Wallet providers and session
+├── supabase/              Schema and migrations
 └── types/                 Shared TypeScript types
 ```
 
 ---
 
-## 🧪 CI Pipeline
+## CI Pipeline
 
 GitHub Actions runs on PRs and pushes to `main`:
 
 ```
-npm ci  →  npm run lint  →  npm run build  →  cargo test (contracts/task_escrow)
+npm ci -> npm run lint -> npm run build -> cargo test (contracts/task_escrow)
 ```
 
 ---
 
-## 📋 User Guide
+## User Guide
 
 | Step | Action |
 |:---:|:---|
 | **1** | Open the [live app](https://execra6.vercel.app) and connect a Stellar wallet |
-| **2** | Go to `/settings` and enable **Sponsored Fee Bump** if desired |
-| **3** | Open `/agents` and run any agent task |
-| **4** | Review execution history in `/activity` |
-| **5** | Check `/dashboard` for metrics and on-chain proof |
+| **2** | Open `/agents` and run any agent task |
+| **3** | Review execution history in `/activity` |
+| **4** | Check `/dashboard` for metrics and on-chain proof |
+| **5** | Use `/settings` only if fee sponsorship is configured for the deployment |
 
 ---
 
-## 👥 User Feedback
+## User Feedback
 
-Tested with **30+ testnet users**.
+Tested with **30+ early users**.
 
 <p>
-  <a href="https://docs.google.com/spreadsheets/d/1m6TaHdlt-Aq-8KD_0iVJUwQH0wSc6tWdmSN2C3pYl3Q/edit?usp=sharing"><img src="https://img.shields.io/badge/📊_Feedback_Sheet-Google_Sheets-34a853?style=for-the-badge" alt="Feedback" /></a>
-  <a href="https://stellar.expert/explorer/testnet"><img src="https://img.shields.io/badge/🔭_Explorer-Stellar_Expert-7c3aed?style=for-the-badge" alt="Explorer" /></a>
+  <a href="https://docs.google.com/spreadsheets/d/1m6TaHdlt-Aq-8KD_0iVJUwQH0wSc6tWdmSN2C3pYl3Q/edit?usp=sharing"><img src="https://img.shields.io/badge/Feedback_Sheet-Google_Sheets-34a853?style=for-the-badge" alt="Feedback" /></a>
+  <a href="https://stellar.expert/explorer/public"><img src="https://img.shields.io/badge/Explorer-Stellar_Expert-7c3aed?style=for-the-badge" alt="Explorer" /></a>
 </p>
 
 ---
 
-## 🌍 Community
+## Community
 
 <p>
-  <a href="https://x.com/anuraggdubeyy/status/2048052847737184593?s=20"><img src="https://img.shields.io/badge/𝕏_Post-@anuraggdubeyy-000?logo=x&logoColor=white&style=for-the-badge" alt="Twitter" /></a>
+  <a href="https://x.com/anuraggdubeyy/status/2048052847737184593?s=20"><img src="https://img.shields.io/badge/Post-@anuraggdubeyy-000?logo=x&logoColor=white&style=for-the-badge" alt="Twitter" /></a>
 </p>
 
 <p align="center">
@@ -193,13 +218,13 @@ Tested with **30+ testnet users**.
 
 ---
 
-## 📝 Security
+## Security
 
 - [Completed Security Checklist](./docs/security-checklist.md)
 
 ---
 
-## ⚙️ Deployment Note
+## Deployment Note
 
 The browser agent runs Playwright on the server. Chromium is installed at build time via the `postinstall` script:
 
@@ -211,5 +236,5 @@ node scripts/installPlaywrightBrowsers.mjs
 ---
 
 <p align="center">
-  <sub>Built with 🤍 on Stellar · Powered by Soroban smart contracts</sub>
+  <sub>Built on Stellar / Powered by Soroban smart contracts</sub>
 </p>
