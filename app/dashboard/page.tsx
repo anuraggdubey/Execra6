@@ -35,6 +35,8 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
+        if (!isHydrated) return
+
         let cancelled = false
 
         const load = async () => {
@@ -78,7 +80,7 @@ export default function DashboardPage() {
         return () => {
             cancelled = true
         }
-    }, [walletAddress])
+    }, [walletAddress, isHydrated])
 
     const totalCompletedTasks = useMemo(
         () => agents.reduce((sum, agent) => sum + agent.tasksCompleted, 0),

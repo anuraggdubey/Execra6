@@ -19,10 +19,10 @@ app.prepare().then(() => {
 
     // Delegate WebSocket upgrade requests (HMR / Turbopack) to Next.js
     httpServer.on("upgrade", (req, socket, head) => {
-        const { pathname } = parse(req.url || "/", true)
-        if (pathname === "/_next/webpack-hmr") {
+        try {
             upgradeHandler(req, socket, head)
-        } else {
+        } catch (err) {
+            console.error("[server] Upgrade handler error:", err)
             socket.destroy()
         }
     })

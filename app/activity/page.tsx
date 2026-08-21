@@ -97,8 +97,10 @@ export default function ActivityPage() {
 
         let cancelled = false
 
-        const fetchTasks = async () => {
-            setTasksLoading(true)
+        const fetchTasks = async (isInitial = false) => {
+            if (isInitial) {
+                setTasksLoading(true)
+            }
             setTasksError(null)
             try {
                 const response = await fetch(`/api/tasks?walletAddress=${encodeURIComponent(effectiveWalletAddress)}&limit=50`)
@@ -107,17 +109,17 @@ export default function ActivityPage() {
                 if (!cancelled) setTasks(Array.isArray(data.tasks) ? data.tasks : [])
             } catch (error) {
                 console.error("[activity] Failed to fetch tasks", error)
-                if (!cancelled) {
+                if (!cancelled && isInitial) {
                     setTasks([])
                     setTasksError(error instanceof Error ? error.message : "Failed to load task history.")
                 }
             } finally {
-                if (!cancelled) setTasksLoading(false)
+                if (!cancelled && isInitial) setTasksLoading(false)
             }
         }
 
-        void fetchTasks()
-        const interval = window.setInterval(() => void fetchTasks(), 20000)
+        void fetchTasks(true)
+        const interval = window.setInterval(() => void fetchTasks(false), 20000)
 
         return () => {
             cancelled = true
