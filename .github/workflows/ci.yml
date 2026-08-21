@@ -76,19 +76,14 @@ jobs:
 
       - name: Run task escrow contract tests
         working-directory: contracts/task_escrow
-        run: |
-          cargo update -p ed25519-dalek --precise 2.1.1 || true
-          cargo test
+        run: cargo test --locked
 
       - name: Run task proof contract tests
         working-directory: contracts/task_proof
-        run: |
-          cargo update -p ed25519-dalek --precise 2.1.1 || true
-          cargo test
+        run: cargo test --locked
 
       - name: Run agent registry contract tests
         working-directory: contracts/agent_registry
-        run: |
-          cargo update -p ed25519-dalek --precise 2.1.1 || true
-          cargo test
+        run: cargo test --locked
+
 

@@ -107,7 +107,6 @@ next-env.d.ts
 contracts/**/target/
 contracts/**/*.wasm
 contracts/**/*.d
-contracts/**/Cargo.lock
 .soroban/
 .stellar/
 
