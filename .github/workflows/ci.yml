@@ -56,14 +56,14 @@ jobs:
         run: npm ci
 
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.94.0
         with:
           targets: wasm32v1-none
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: rust-${{ runner.os }}-${{ hashFiles('contracts/**/Cargo.lock') }}
+          prefix-key: rust-1.94.0-${{ runner.os }}-${{ hashFiles('contracts/**/Cargo.lock') }}
           workspaces: |
             contracts/task_escrow
             contracts/task_proof
