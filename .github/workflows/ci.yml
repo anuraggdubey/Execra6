@@ -63,10 +63,12 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
+          prefix-key: rust-${{ runner.os }}-${{ hashFiles('contracts/**/Cargo.lock') }}
           workspaces: |
             contracts/task_escrow
             contracts/task_proof
             contracts/agent_registry
+          cache-targets: false
 
       - name: Run ESLint
         run: npm run lint
@@ -85,5 +87,3 @@ jobs:
       - name: Run agent registry contract tests
         working-directory: contracts/agent_registry
         run: cargo test --locked
-
-

@@ -6,7 +6,7 @@
     "dev": "node server.mjs",
     "build": "next build",
     "start": "node server.mjs",
-    "lint": "eslint",
+    "lint": "eslint app components lib types --ext .js,.jsx,.ts,.tsx",
     "deploy:mainnet": "node scripts/deployMainnet.mjs",
     "postinstall": "node scripts/installPlaywrightBrowsers.mjs",
     "import:legacy-projects": "node scripts/importLegacyProjects.mjs"
