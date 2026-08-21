@@ -1,3 +1,4 @@
+<!-- Execra Documentation -->
 # Security Checklist
 
 This checklist is the repository-backed security proof for the current Excera build.

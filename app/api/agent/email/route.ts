@@ -1,3 +1,4 @@
+// Execra Platform
 import { NextResponse } from "next/server"
 import type { EmailTone } from "@/lib/agents/emailAgentService"
 import { generateEmailDraft } from "@/lib/agents/emailAgentService"

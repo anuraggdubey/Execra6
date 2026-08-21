@@ -1,3 +1,4 @@
+// Execra Platform
 export { parseAgentOutput, runCodingAgent, type ProjectFiles } from "@/lib/agents/codingAgentService"
 
 export interface AgentStep {

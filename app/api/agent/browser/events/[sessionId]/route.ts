@@ -1,3 +1,4 @@
+// Execra Platform
 import { subscribeToBrowserSession } from "@/lib/services/browserSessionStore"
 
 export const runtime = "nodejs"

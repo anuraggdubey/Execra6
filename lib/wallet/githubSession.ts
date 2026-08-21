@@ -1,3 +1,4 @@
+// Execra Platform
 "use client"
 
 const STORAGE_KEY = "execra_github_sessions_v1"

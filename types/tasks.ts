@@ -1,3 +1,4 @@
+// Execra Platform
 export type AgentType = "github" | "coding" | "document" | "email" | "search" | "browser"
 
 export type TaskStatus = "pending" | "completed" | "failed"

@@ -1,3 +1,4 @@
+<!-- Execra Documentation -->
 # Supabase Setup
 
 Run the SQL in [schema.sql](./schema.sql) inside the Supabase SQL Editor before starting the app or importing legacy coding outputs.

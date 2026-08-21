@@ -1,3 +1,4 @@
+// Execra Platform
 import { NextResponse } from "next/server"
 
 const COMMONS_API_URL = "https://commons.wikimedia.org/w/api.php"

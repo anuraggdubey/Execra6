@@ -1,3 +1,4 @@
+-- Execra Database Schema
 alter table public.tasks
 drop constraint if exists tasks_agent_type_check;
 

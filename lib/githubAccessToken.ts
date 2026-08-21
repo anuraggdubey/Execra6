@@ -1,3 +1,4 @@
+// Execra Platform
 function readBearerToken(request: Request) {
     const authHeader = request.headers.get("authorization") ?? request.headers.get("Authorization")
     if (!authHeader) return null

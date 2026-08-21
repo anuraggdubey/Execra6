@@ -1,3 +1,4 @@
+// Execra Platform
 import { AgentExecutionError, createToolError } from "@/lib/agents/shared"
 
 export type SearchDepth = "basic" | "detailed"

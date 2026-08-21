@@ -1,3 +1,4 @@
+// Execra Platform
 import { consumeOAuthState, getGitHubOAuthConfig } from "@/lib/githubAuth"
 
 function escapeForHtml(value: string) {

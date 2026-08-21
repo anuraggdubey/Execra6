@@ -1,3 +1,4 @@
+-- Execra Database Schema
 alter table public.tasks
     add column if not exists on_chain_task_id bigint,
     add column if not exists reward_stroops bigint,

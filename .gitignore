@@ -1,3 +1,4 @@
+# Execra Git Ignore Rules
 # Dependencies
 /node_modules
 /.pnp

@@ -1,3 +1,4 @@
+// Execra Platform
 import * as XLSX from "xlsx"
 import { completeWithOpenRouter } from "@/lib/llm/openrouter"
 import { AgentExecutionError, createLlmError } from "@/lib/agents/shared"

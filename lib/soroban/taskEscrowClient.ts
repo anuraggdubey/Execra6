@@ -1,3 +1,4 @@
+// Execra Platform
 "use client"
 
 import { Buffer } from "buffer"

@@ -1,3 +1,4 @@
+// Execra Platform
 export function previewTool(projectId: string) {
     const baseUrl = process.env.APP_URL ?? "http://localhost:3001"
     return {

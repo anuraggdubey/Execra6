@@ -1,3 +1,4 @@
+// Execra Platform
 export const TASK_ESCROW_ABI = [
     {
         name: "init",

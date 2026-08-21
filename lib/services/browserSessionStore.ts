@@ -1,3 +1,4 @@
+// Execra Platform
 type SessionMessage =
     | { type: "connected"; sessionId: string; timestamp: string }
     | { type: "log"; sessionId: string; log: BrowserAgentLog }

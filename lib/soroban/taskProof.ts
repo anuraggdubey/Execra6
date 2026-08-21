@@ -1,3 +1,4 @@
+// Execra Platform
 import type { AgentType, TaskFeatureState } from "@/types/tasks"
 
 const TASK_ID_SUFFIX_LENGTH = 4

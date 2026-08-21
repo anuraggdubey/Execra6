@@ -1,3 +1,4 @@
+// Execra Platform
 "use client"
 
 type PromptBoxProps = {

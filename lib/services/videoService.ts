@@ -1,3 +1,4 @@
+// Execra Platform
 import { createToolError } from "@/lib/agents/shared"
 
 export type VideoResult = {

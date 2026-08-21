@@ -1,3 +1,4 @@
+// Execra Platform
 const config = {
   plugins: {
     "@tailwindcss/postcss": {},

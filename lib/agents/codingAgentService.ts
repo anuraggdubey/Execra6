@@ -1,3 +1,4 @@
+// Execra Platform
 import { completeWithOpenRouter } from "@/lib/llm/openrouter"
 import { AgentExecutionError, createLlmError } from "@/lib/agents/shared"
 import { fileTool } from "@/lib/tools/fileTool"

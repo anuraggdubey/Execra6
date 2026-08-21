@@ -1,3 +1,4 @@
+// Execra Platform
 "use client"
 
 import LandingNavbar from "@/components/landing/LandingNavbar"

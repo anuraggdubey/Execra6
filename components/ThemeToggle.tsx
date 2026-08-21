@@ -1,3 +1,4 @@
+// Execra Platform
 "use client"
 
 import { Moon, SunMedium } from "lucide-react"

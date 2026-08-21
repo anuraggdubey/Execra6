@@ -1,3 +1,4 @@
+// Execra Platform
 import { getSupabaseServerClient } from "@/lib/supabaseServer"
 import { requireWalletAddress } from "@/lib/services/validation"
 import { AgentExecutionError } from "@/lib/agents/shared"

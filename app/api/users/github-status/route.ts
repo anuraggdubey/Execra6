@@ -1,3 +1,4 @@
+// Execra Platform
 import { NextResponse } from "next/server"
 import { AgentExecutionError } from "@/lib/agents/shared"
 import { setGitHubConnected } from "@/lib/services/userService"

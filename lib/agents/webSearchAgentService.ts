@@ -1,3 +1,4 @@
+// Execra Platform
 import { AgentExecutionError } from "@/lib/agents/shared"
 import { completeWithOpenRouter } from "@/lib/llm/openrouter"
 import { searchWeb, type SearchDepth, type SearchResult } from "@/lib/services/searchService"

@@ -1,3 +1,4 @@
+// Execra Platform
 import { chromium, type Page } from "playwright"
 import { AgentExecutionError } from "@/lib/agents/shared"
 import type { BrowserAutomationAction } from "@/lib/services/automationPlanner"

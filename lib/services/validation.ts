@@ -1,3 +1,4 @@
+// Execra Platform
 import { AgentExecutionError } from "@/lib/agents/shared"
 import type { AgentType, OnChainTaskStatus, TaskStatus } from "@/types/tasks"
 

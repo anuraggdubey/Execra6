@@ -1,3 +1,4 @@
+// Execra Platform
 export const SOROBAN_CONFIG = {
     network: process.env.NEXT_PUBLIC_SOROBAN_NETWORK ?? "testnet",
     rpcUrl: process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? "https://soroban-testnet.stellar.org",

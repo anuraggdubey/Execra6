@@ -1,3 +1,4 @@
+// Execra Platform
 import type { FeeMode, TaskFeatureConfig, TaskFeatureState } from "@/types/tasks"
 
 const WALLET_ADDRESS_REGEX = /^[A-Z2-7]{32,70}$/i

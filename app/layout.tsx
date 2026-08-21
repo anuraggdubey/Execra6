@@ -1,3 +1,4 @@
+// Execra Platform
 import { DM_Mono, DM_Sans } from "next/font/google"
 import "./globals.css"
 import { AgentProvider } from "@/lib/AgentContext"

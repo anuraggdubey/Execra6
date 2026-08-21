@@ -1,3 +1,4 @@
+// Execra Platform
 import nodemailer from "nodemailer"
 import { AgentExecutionError } from "@/lib/agents/shared"
 

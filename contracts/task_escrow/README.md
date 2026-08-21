@@ -1,3 +1,4 @@
+<!-- Execra Documentation -->
 # Task Escrow Soroban Contract
 
 This contract escrows native Stellar value through the Stellar Asset Contract (SAC) for XLM and tracks task lifecycle on-chain.

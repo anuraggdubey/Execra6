@@ -1,3 +1,4 @@
+// Execra Platform
 import { NextResponse } from "next/server"
 import { Keypair, rpc, Transaction, TransactionBuilder } from "@stellar/stellar-sdk"
 import { SOROBAN_CONFIG } from "@/lib/soroban/config"

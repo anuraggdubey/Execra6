@@ -1,3 +1,4 @@
+// Execra Platform
 import { NextResponse } from "next/server"
 import { randomBytes } from "crypto"
 import { getGitHubOAuthConfig, storeOAuthState } from "@/lib/githubAuth"

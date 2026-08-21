@@ -1,3 +1,4 @@
+// Execra Platform
 import { NextResponse } from "next/server"
 import { getTaskById } from "@/lib/services/taskService"
 import type { CodingTaskOutput } from "@/types/tasks"

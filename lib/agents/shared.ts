@@ -1,3 +1,4 @@
+// Execra Platform
 export class AgentExecutionError extends Error {
     code: string
     status: number

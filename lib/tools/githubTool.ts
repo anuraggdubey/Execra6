@@ -1,3 +1,4 @@
+// Execra Platform
 const GITHUB_API_VERSION = "2022-11-28"
 
 export interface GitHubUser {

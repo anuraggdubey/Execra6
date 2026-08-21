@@ -1,3 +1,4 @@
+// Execra Platform
 import { createHash } from "node:crypto"
 import { Keypair, Operation, rpc, TransactionBuilder, xdr, Address } from "@stellar/stellar-sdk"
 import { NextResponse } from "next/server"
