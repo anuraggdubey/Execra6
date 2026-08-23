@@ -45,6 +45,77 @@ The platform is wallet-first: task payments are created from the connected user'
 
 ---
 
+## User Feedback
+
+Tested with **30+ early users**.
+
+<p>
+  <a href="https://docs.google.com/spreadsheets/d/1m6TaHdlt-Aq-8KD_0iVJUwQH0wSc6tWdmSN2C3pYl3Q/edit?usp=sharing"><img src="https://img.shields.io/badge/Feedback_Sheet-Google_Sheets-34a853?style=for-the-badge" alt="Feedback" /></a>
+  <a href="https://stellar.expert/explorer/public"><img src="https://img.shields.io/badge/Explorer-Stellar_Expert-7c3aed?style=for-the-badge" alt="Explorer" /></a>
+</p>
+
+---
+
+## Community & Updates
+
+<p align="center">
+  <a href="https://x.com/Execra6"><img src="https://img.shields.io/badge/Official_X_Account-@Execra6-000000?style=for-the-badge&logo=x&logoColor=white" alt="Official X Account" /></a>
+  <a href="https://github.com/anuraggdubey/Execra6/commits/main/"><img src="https://img.shields.io/badge/Product_Improvement_Commits-GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="Improvement Commits" /></a>
+  <a href="https://github.com/anuraggdubey/Execra6/blob/main/Execra6%20Documentation.md"><img src="https://img.shields.io/badge/Full_System_Documentation-Execra6-6366f1?style=for-the-badge&logo=gitbook&logoColor=white" alt="Documentation" /></a>
+</p>
+
+### 📢 Official Social Media & Product Update Posts
+
+Follow our official channel on X ([@Execra6](https://x.com/Execra6)) for live announcements, architecture breakdowns, and product releases:
+
+---
+
+#### 🔹 Update 1: 6 Autonomous Agents on a Single Stellar Execution Layer
+> *"EXECRA: 6 Agents | Single execution layer | Many tasks | @BuildOnStellar | Stay Tuned."*  
+> 🔗 **Post Link:** [View on X (Post #1)](https://x.com/Execra6/status/2069684652496028027?s=20)
+
+<p align="center">
+  <a href="https://x.com/Execra6/status/2069684652496028027?s=20">
+    <img src="./Screenshots/post1.png" alt="Execra 6 Agents Post" width="650" />
+  </a>
+</p>
+
+---
+
+#### 🔹 Update 2: What is Execra? Autonomous Multi-Agent Workspace
+> *"EXECRA is an AI automated platform entirely on Stellar blockchain with 6 simultaneous AI agents and on-chain escrow lockup."*  
+> 🔗 **Post Link:** [View on X (Post #2)](https://x.com/Execra6/status/2075195010790952990?s=20)
+
+<p align="center">
+  <a href="https://x.com/Execra6/status/2075195010790952990?s=20">
+    <img src="./Screenshots/post2.png" alt="Execra Overview Post" width="650" />
+  </a>
+</p>
+
+---
+
+#### 🔹 Update 3: Live on Stellar Mainnet
+> *"Execra is live on the Stellar Mainnet with autonomous agent workflows and wallet-first escrow settlement."*  
+> 🔗 **Post Link:** [View on X (Post #3)](https://x.com/Execra6/status/2075859737321603462?s=20)
+
+<p align="center">
+  <a href="https://x.com/Execra6/status/2075859737321603462?s=20">
+    <img src="./Screenshots/post3.png" alt="Execra Mainnet Launch Post" width="650" />
+  </a>
+</p>
+
+---
+
+### 🛠️ Continuous Product Improvement & Commits
+
+Track ongoing development, protocol upgrades, and agent optimizations directly on GitHub:
+
+- 🚀 **Live Commit History & Product Improvements:** [github.com/anuraggdubey/Execra6/commits/main/](https://github.com/anuraggdubey/Execra6/commits/main/)
+- 📖 **Comprehensive System Documentation:** [Execra6 Documentation.md](./Execra6%20Documentation.md) | [Online GitHub View](https://github.com/anuraggdubey/Execra6/blob/main/Execra6%20Documentation.md)
+- 💬 **Creator Post:** [X Post by @anuraggdubeyy](https://x.com/anuraggdubeyy/status/2048052847737184593?s=20)
+
+---
+
 ## Platform Features
 
 - Stellar Mainnet escrow for agent tasks through Soroban contracts
@@ -195,77 +266,6 @@ npm ci -> npm run lint -> npm run build -> cargo test (contracts/task_escrow)
 | **3** | Review execution history in `/activity` |
 | **4** | Check `/dashboard` for metrics and on-chain proof |
 | **5** | Use `/settings` only if fee sponsorship is configured for the deployment |
-
----
-
-## User Feedback
-
-Tested with **30+ early users**.
-
-<p>
-  <a href="https://docs.google.com/spreadsheets/d/1m6TaHdlt-Aq-8KD_0iVJUwQH0wSc6tWdmSN2C3pYl3Q/edit?usp=sharing"><img src="https://img.shields.io/badge/Feedback_Sheet-Google_Sheets-34a853?style=for-the-badge" alt="Feedback" /></a>
-  <a href="https://stellar.expert/explorer/public"><img src="https://img.shields.io/badge/Explorer-Stellar_Expert-7c3aed?style=for-the-badge" alt="Explorer" /></a>
-</p>
-
----
-
-## Community & Updates
-
-<p align="center">
-  <a href="https://x.com/Execra6"><img src="https://img.shields.io/badge/Official_X_Account-@Execra6-000000?style=for-the-badge&logo=x&logoColor=white" alt="Official X Account" /></a>
-  <a href="https://github.com/anuraggdubey/Execra6/commits/main/"><img src="https://img.shields.io/badge/Product_Improvement_Commits-GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="Improvement Commits" /></a>
-  <a href="https://github.com/anuraggdubey/Execra6/blob/main/Execra6%20Documentation.md"><img src="https://img.shields.io/badge/Full_System_Documentation-Execra6-6366f1?style=for-the-badge&logo=gitbook&logoColor=white" alt="Documentation" /></a>
-</p>
-
-### 📢 Official Social Media & Product Update Posts
-
-Follow our official channel on X ([@Execra6](https://x.com/Execra6)) for live announcements, architecture breakdowns, and product releases:
-
----
-
-#### 🔹 Update 1: 6 Autonomous Agents on a Single Stellar Execution Layer
-> *"EXECRA: 6 Agents | Single execution layer | Many tasks | @BuildOnStellar | Stay Tuned."*  
-> 🔗 **Post Link:** [View on X (Post #1)](https://x.com/Execra6/status/2069684652496028027?s=20)
-
-<p align="center">
-  <a href="https://x.com/Execra6/status/2069684652496028027?s=20">
-    <img src="./Screenshots/post1.png" alt="Execra 6 Agents Post" width="650" />
-  </a>
-</p>
-
----
-
-#### 🔹 Update 2: What is Execra? Autonomous Multi-Agent Workspace
-> *"EXECRA is an AI automated platform entirely on Stellar blockchain with 6 simultaneous AI agents and on-chain escrow lockup."*  
-> 🔗 **Post Link:** [View on X (Post #2)](https://x.com/Execra6/status/2075195010790952990?s=20)
-
-<p align="center">
-  <a href="https://x.com/Execra6/status/2075195010790952990?s=20">
-    <img src="./Screenshots/post2.png" alt="Execra Overview Post" width="650" />
-  </a>
-</p>
-
----
-
-#### 🔹 Update 3: Live on Stellar Mainnet
-> *"Execra is live on the Stellar Mainnet with autonomous agent workflows and wallet-first escrow settlement."*  
-> 🔗 **Post Link:** [View on X (Post #3)](https://x.com/Execra6/status/2075859737321603462?s=20)
-
-<p align="center">
-  <a href="https://x.com/Execra6/status/2075859737321603462?s=20">
-    <img src="./Screenshots/post3.png" alt="Execra Mainnet Launch Post" width="650" />
-  </a>
-</p>
-
----
-
-### 🛠️ Continuous Product Improvement & Commits
-
-Track ongoing development, protocol upgrades, and agent optimizations directly on GitHub:
-
-- 🚀 **Live Commit History & Product Improvements:** [github.com/anuraggdubey/Execra6/commits/main/](https://github.com/anuraggdubey/Execra6/commits/main/)
-- 📖 **Comprehensive System Documentation:** [Execra6 Documentation.md](./Execra6%20Documentation.md) | [Online GitHub View](https://github.com/anuraggdubey/Execra6/blob/main/Execra6%20Documentation.md)
-- 💬 **Creator Post:** [X Post by @anuraggdubeyy](https://x.com/anuraggdubeyy/status/2048052847737184593?s=20)
 
 ---
 
