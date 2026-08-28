@@ -47,12 +47,9 @@ The platform is wallet-first: task payments are created from the connected user'
 
 ## User Feedback
 
-Tested with **30+ early users**.
+Tested with **40+ early users**
 
-<p>
-  <a href="https://docs.google.com/spreadsheets/d/1m6TaHdlt-Aq-8KD_0iVJUwQH0wSc6tWdmSN2C3pYl3Q/edit?usp=sharing"><img src="https://img.shields.io/badge/Feedback_Sheet-Google_Sheets-34a853?style=for-the-badge" alt="Feedback" /></a>
-  <a href="https://stellar.expert/explorer/public"><img src="https://img.shields.io/badge/Explorer-Stellar_Expert-7c3aed?style=for-the-badge" alt="Explorer" /></a>
-</p>
+**[User Feedback Sheet (Google Sheets)](https://docs.google.com/spreadsheets/d/1m6TaHdlt-Aq-8KD_0iVJUwQH0wSc6tWdmSN2C3pYl3Q/edit?usp=sharing)**
 
 ---
 
