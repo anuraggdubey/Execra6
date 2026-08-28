@@ -32,6 +32,16 @@ The platform is wallet-first: task payments are created from the connected user'
 
 ---
 
+
+## User Feedback
+
+Tested with **40+ early users**
+
+**[User Feedback Sheet (Google Sheets)](https://docs.google.com/spreadsheets/d/1m6TaHdlt-Aq-8KD_0iVJUwQH0wSc6tWdmSN2C3pYl3Q/edit?usp=sharing)**
+
+---
+
+
 ## Six Agents, One Surface
 
 | Agent | What it does |
@@ -42,14 +52,6 @@ The platform is wallet-first: task payments are created from the connected user'
 | **Email** | Draft and send escrow-backed emails through a configured mailbox |
 | **Web Search** | Run live web research with source-backed summaries and related content |
 | **Browser** | Control a visible browser session and stream live execution logs |
-
----
-
-## User Feedback
-
-Tested with **40+ early users**
-
-**[User Feedback Sheet (Google Sheets)](https://docs.google.com/spreadsheets/d/1m6TaHdlt-Aq-8KD_0iVJUwQH0wSc6tWdmSN2C3pYl3Q/edit?usp=sharing)**
 
 ---
 
