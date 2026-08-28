@@ -1,4 +1,16 @@
-// Execra Soroban Contract
+//! # Execra Agent Registry Smart Contract
+//!
+//! The `AgentRegistryContract` serves as the authoritative on-chain registry for autonomous
+//! execution agents in the Execra decentralized execution layer on Stellar Soroban.
+//!
+//! ## Key Capabilities
+//! - **Agent Lifecycle Management**: Admin-governed registration, deactivation, and reactivation of agents.
+//! - **Reputation Scoring**: Dynamic reputation tracking (+10 on successful task completion, -20 on failure/cancellation),
+//!   bounded between a minimum of 0 and a maximum of 1,000.
+//! - **Authorized Callers**: Role-based access control permitting verified contracts (such as `TaskEscrow`) to report execution outcomes.
+//! - **Contract Upgradeability**: Admin-controlled WASM hash upgrade mechanism.
+//! - **State Archival Protection**: Automatic Soroban TTL extension on instance and persistent storage keys.
+
 #![no_std]
 
 use soroban_sdk::{
@@ -6,51 +18,112 @@ use soroban_sdk::{
     Symbol, Vec,
 };
 
+// ============================================================================
+// Constants & Configuration
+// ============================================================================
+
+/// TTL threshold (in ledgers) before triggering an instance storage TTL bump (~30 days).
 const INSTANCE_BUMP_THRESHOLD: u32 = 518_400;
+
+/// Number of ledgers to extend instance storage lifetime when threshold is met (~31 days).
 const INSTANCE_BUMP_AMOUNT: u32 = 535_680;
+
+/// TTL threshold (in ledgers) before triggering a persistent storage TTL bump (~30 days).
 const PERSISTENT_BUMP_THRESHOLD: u32 = 518_400;
+
+/// Number of ledgers to extend persistent storage lifetime when threshold is met (~31 days).
 const PERSISTENT_BUMP_AMOUNT: u32 = 535_680;
+
+/// Initial reputation score granted to newly registered agents.
 const INITIAL_REPUTATION: u32 = 100;
+
+/// Maximum reputation score cap for any agent.
 const MAX_REPUTATION: u32 = 1000;
+
+/// Reputation points added upon successful task execution.
 const SUCCESS_INCREMENT: u32 = 10;
+
+/// Reputation points subtracted upon task failure or cancellation.
 const FAILURE_DECREMENT: u32 = 20;
 
+// ============================================================================
+// Data Types & Storage Keys
+// ============================================================================
+
+/// Represents an on-chain autonomous agent registered with Execra.
 #[contracttype]
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Agent {
+    /// Unique identifier symbol for the agent (e.g., `github_agent`, `coding_agent`).
     pub agent_id: Symbol,
+    /// Category / type descriptor of the agent (e.g., `github`, `coding`, `browser`).
     pub agent_type: Symbol,
+    /// Payout and control Stellar address associated with the agent.
     pub wallet_address: Address,
+    /// Cumulative counter of successfully verified tasks completed by this agent.
     pub total_tasks_completed: u64,
+    /// Cumulative counter of tasks cancelled or failed for this agent.
     pub total_tasks_cancelled: u64,
+    /// Current reputation score (clamped between 0 and 1,000).
     pub reputation_score: u32,
+    /// Operational status flag indicating whether the agent is accepting new tasks.
     pub is_active: bool,
+    /// Ledger timestamp (Unix seconds) when the agent was first registered.
     pub registered_at: u64,
 }
 
+/// Storage keys for indexing contract state.
 #[contracttype]
 #[derive(Clone)]
 enum DataKey {
+    /// Persistent key storing `Agent` records, indexed by agent ID.
     Agent(Symbol),
+    /// Instance key storing the list of contract addresses authorized to update agent reputation.
     AuthorizedCallers,
 }
 
+// ============================================================================
+// Error Codes
+// ============================================================================
+
+/// Error codes returned by the Agent Registry contract.
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum AgentRegistryError {
+    /// The contract has already been initialized with an admin address.
     AlreadyInitialized = 1,
+    /// The caller is not authorized to execute this administrative or privileged action.
     Unauthorized = 2,
+    /// An agent with the given `agent_id` is already registered.
     AgentAlreadyExists = 3,
+    /// The requested `agent_id` does not exist in persistent storage.
     AgentNotFound = 4,
+    /// The caller address has already been granted reputation update privileges.
     CallerAlreadyAuthorized = 5,
 }
+
+// ============================================================================
+// Smart Contract Implementation
+// ============================================================================
 
 #[contract]
 pub struct AgentRegistryContract;
 
 #[contractimpl]
 impl AgentRegistryContract {
+    // ------------------------------------------------------------------------
+    // 1. Initialization
+    // ------------------------------------------------------------------------
+
+    /// Initializes the Agent Registry contract with the specified admin address.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `admin` - The Stellar address designated as the contract administrator.
+    ///
+    /// # Errors
+    /// * `AgentRegistryError::AlreadyInitialized` - If the contract has already been initialized.
     pub fn init(env: Env, admin: Address) {
         if env.storage().instance().has(&symbol_short!("ADMIN")) {
             soroban_sdk::panic_with_error!(&env, AgentRegistryError::AlreadyInitialized);
@@ -64,6 +137,22 @@ impl AgentRegistryContract {
         extend_instance(&env);
     }
 
+    // ------------------------------------------------------------------------
+    // 2. Agent Lifecycle Management
+    // ------------------------------------------------------------------------
+
+    /// Registers a new execution agent in the registry.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `admin` - The admin address authorising the registration.
+    /// * `agent_id` - Unique identifier symbol for the agent.
+    /// * `agent_type` - Categorical symbol classifying agent workload (e.g. `coding`, `browser`).
+    /// * `wallet_address` - The payout wallet address for the agent.
+    ///
+    /// # Errors
+    /// * `AgentRegistryError::Unauthorized` - If the caller is not the admin.
+    /// * `AgentRegistryError::AgentAlreadyExists` - If the agent ID is already registered.
     pub fn register_agent(
         env: Env,
         admin: Address,
@@ -94,6 +183,51 @@ impl AgentRegistryContract {
         extend_instance(&env);
     }
 
+    /// Deactivates an existing agent, preventing it from taking new tasks.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `admin` - The contract administrator address.
+    /// * `agent_id` - The identifier of the agent to deactivate.
+    pub fn deactivate_agent(env: Env, admin: Address, agent_id: Symbol) {
+        require_admin(&env, &admin);
+        set_active_state(&env, agent_id, false);
+    }
+
+    /// Reactivates a previously deactivated agent.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `admin` - The contract administrator address.
+    /// * `agent_id` - The identifier of the agent to reactivate.
+    pub fn reactivate_agent(env: Env, admin: Address, agent_id: Symbol) {
+        require_admin(&env, &admin);
+        set_active_state(&env, agent_id, true);
+    }
+
+    // ------------------------------------------------------------------------
+    // 3. Reputation & Performance Tracking
+    // ------------------------------------------------------------------------
+
+    /// Updates the reputation and task counters for an agent following task outcome.
+    ///
+    /// On success:
+    /// - `total_tasks_completed` is incremented by 1.
+    /// - `reputation_score` increases by 10 (capped at `MAX_REPUTATION` = 1,000).
+    ///
+    /// On failure / cancellation:
+    /// - `total_tasks_cancelled` is incremented by 1.
+    /// - `reputation_score` decreases by 20 (floored at 0).
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `caller` - The authorized caller address (e.g., `TaskEscrow` contract).
+    /// * `agent_id` - The identifier of the agent.
+    /// * `success` - `true` if the task succeeded, `false` if cancelled or failed.
+    ///
+    /// # Errors
+    /// * `AgentRegistryError::Unauthorized` - If the caller is not in `AuthorizedCallers`.
+    /// * `AgentRegistryError::AgentNotFound` - If the agent is not registered.
     pub fn update_reputation(env: Env, caller: Address, agent_id: Symbol, success: bool) {
         caller.require_auth();
         if !Self::is_authorized(env.clone(), caller.clone()) {
@@ -115,24 +249,41 @@ impl AgentRegistryContract {
         extend_persistent(&env, &key);
     }
 
+    /// Fetches the full on-chain record of an agent.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `agent_id` - The identifier of the agent to query.
+    ///
+    /// # Errors
+    /// * `AgentRegistryError::AgentNotFound` - If the agent record does not exist.
     pub fn get_agent(env: Env, agent_id: Symbol) -> Agent {
         read_agent(&env, &DataKey::Agent(agent_id))
     }
 
+    /// Fetches only the current reputation score of an agent.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `agent_id` - The identifier of the agent.
     pub fn get_reputation(env: Env, agent_id: Symbol) -> u32 {
         Self::get_agent(env, agent_id).reputation_score
     }
 
-    pub fn deactivate_agent(env: Env, admin: Address, agent_id: Symbol) {
-        require_admin(&env, &admin);
-        set_active_state(&env, agent_id, false);
-    }
+    // ------------------------------------------------------------------------
+    // 4. Access Control & Authorization
+    // ------------------------------------------------------------------------
 
-    pub fn reactivate_agent(env: Env, admin: Address, agent_id: Symbol) {
-        require_admin(&env, &admin);
-        set_active_state(&env, agent_id, true);
-    }
-
+    /// Authorizes a caller address (e.g. `TaskEscrow`) to update agent reputation.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `admin` - The contract administrator address.
+    /// * `caller` - The address to grant reputation-update privileges.
+    ///
+    /// # Errors
+    /// * `AgentRegistryError::Unauthorized` - If caller is not admin.
+    /// * `AgentRegistryError::CallerAlreadyAuthorized` - If already authorized.
     pub fn authorize_caller(env: Env, admin: Address, caller: Address) {
         require_admin(&env, &admin);
 
@@ -148,16 +299,36 @@ impl AgentRegistryContract {
         extend_instance(&env);
     }
 
+    /// Checks whether an address is an authorized reputation updater.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `caller` - The address to verify.
     pub fn is_authorized(env: Env, caller: Address) -> bool {
         read_authorized_callers(&env).contains(&caller)
     }
 
+    // ------------------------------------------------------------------------
+    // 5. Governance & Contract Upgrades
+    // ------------------------------------------------------------------------
+
+    /// Upgrades the contract WASM bytecode to a new version.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `admin` - The contract administrator address.
+    /// * `new_wasm_hash` - The 32-byte SHA-256 hash of the installed WASM bytecode.
     pub fn upgrade(env: Env, admin: Address, new_wasm_hash: BytesN<32>) {
         require_admin(&env, &admin);
         env.deployer().update_current_contract_wasm(new_wasm_hash);
     }
 }
 
+// ============================================================================
+// Internal Helper Functions
+// ============================================================================
+
+/// Verifies that the provided address matches the stored administrator address.
 fn require_admin(env: &Env, admin: &Address) {
     let stored_admin = read_admin(env);
     if stored_admin != *admin {
@@ -166,6 +337,7 @@ fn require_admin(env: &Env, admin: &Address) {
     admin.require_auth();
 }
 
+/// Retrieves the stored administrator address from instance storage.
 fn read_admin(env: &Env) -> Address {
     env.storage()
         .instance()
@@ -173,6 +345,7 @@ fn read_admin(env: &Env) -> Address {
         .unwrap_or_else(|| soroban_sdk::panic_with_error!(env, AgentRegistryError::Unauthorized))
 }
 
+/// Retrieves the list of authorized callers from instance storage.
 fn read_authorized_callers(env: &Env) -> Vec<Address> {
     env.storage()
         .instance()
@@ -180,6 +353,7 @@ fn read_authorized_callers(env: &Env) -> Vec<Address> {
         .unwrap_or_else(|| Vec::<Address>::new(env))
 }
 
+/// Reads an `Agent` record from persistent storage.
 fn read_agent(env: &Env, key: &DataKey) -> Agent {
     env.storage()
         .persistent()
@@ -187,6 +361,7 @@ fn read_agent(env: &Env, key: &DataKey) -> Agent {
         .unwrap_or_else(|| soroban_sdk::panic_with_error!(env, AgentRegistryError::AgentNotFound))
 }
 
+/// Updates the operational active state flag of an agent.
 fn set_active_state(env: &Env, agent_id: Symbol, is_active: bool) {
     let key = DataKey::Agent(agent_id);
     let mut agent = read_agent(env, &key);
@@ -195,23 +370,30 @@ fn set_active_state(env: &Env, agent_id: Symbol, is_active: bool) {
     extend_persistent(env, &key);
 }
 
+/// Extends the TTL for instance storage if within the threshold.
 fn extend_instance(env: &Env) {
     env.storage()
         .instance()
         .extend_ttl(INSTANCE_BUMP_THRESHOLD, INSTANCE_BUMP_AMOUNT);
 }
 
+/// Extends the TTL for persistent storage key if within the threshold.
 fn extend_persistent(env: &Env, key: &DataKey) {
     env.storage()
         .persistent()
         .extend_ttl(key, PERSISTENT_BUMP_THRESHOLD, PERSISTENT_BUMP_AMOUNT);
 }
 
+// ============================================================================
+// Unit & Integration Tests
+// ============================================================================
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use soroban_sdk::testutils::Address as _;
 
+    /// Test fixture: sets up an initialized contract environment with mock auth.
     fn setup() -> (Env, AgentRegistryContractClient<'static>, Address) {
         let env = Env::default();
         env.mock_all_auths();
@@ -224,6 +406,7 @@ mod tests {
         (env, client, admin)
     }
 
+    /// Helper: registers a standard agent for testing.
     fn register_default_agent(
         env: &Env,
         client: &AgentRegistryContractClient<'_>,

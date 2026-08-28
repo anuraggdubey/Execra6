@@ -9,9 +9,12 @@ export const metadata: Metadata = {
   title: "Execra",
   description: "Execra is a calmer control surface for tool-driven work.",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
     shortcut: "/favicon.ico",
-    apple: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
   },
 }
 

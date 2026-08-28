@@ -1,4 +1,26 @@
-// Execra Soroban Contract
+//! # Execra Task Escrow Smart Contract
+//!
+//! The `TaskEscrowContract` is the core settlement and escrow coordinator for Execra on Stellar Soroban.
+//! It manages user token deposits, task rewards locking, cryptographic proof verification, agent payout,
+//! refund on cancellation, and cross-contract reputation updates.
+//!
+//! ## Escrow Protocol Flow
+//! 1. **Deposit**: User deposits Stellar Asset Contract (SAC) tokens into escrow (`deposit`), crediting their available balance.
+//! 2. **Task Creation**: Admin or authorized backend registers a task with an escrowed reward (`create_task`), locking the reward and incrementing pending tasks.
+//! 3. **Execution & Proof**: Autonomous agent executes the task; authorized executor submits output hash to `TaskProofContract`.
+//! 4. **Settlement / Completion (`complete_task`)**:
+//!    - Verifies proof exists and matches expected SHA-256 output hash.
+//!    - Transfers reward from contract to recipient (executor or user).
+//!    - Marks task status as `Completed` and decrements user's pending task counter.
+//!    - Notifies `AgentRegistryContract` via cross-contract call to increase agent reputation (+10).
+//! 5. **Cancellation (`cancel_task`)**:
+//!    - User cancels a pending task.
+//!    - Escrowed reward is refunded back to user's platform balance.
+//!    - Decrements pending task counter.
+//!    - Notifies `AgentRegistryContract` to penalize agent reputation (-20).
+//! 6. **Withdrawal (`withdraw`)**:
+//!    - User can withdraw unused balance to their wallet provided they have no active pending tasks.
+
 #![no_std]
 
 use soroban_sdk::{
@@ -6,62 +28,129 @@ use soroban_sdk::{
     Env, IntoVal, InvokeError, Symbol, Val, Vec,
 };
 
+// ============================================================================
+// Constants & Configuration
+// ============================================================================
+
+/// TTL threshold (in ledgers) before triggering an instance storage TTL bump (~30 days).
 const INSTANCE_BUMP_THRESHOLD: u32 = 518_400;
+
+/// Number of ledgers to extend instance storage lifetime when threshold is met (~31 days).
 const INSTANCE_BUMP_AMOUNT: u32 = 535_680;
+
+/// TTL threshold (in ledgers) before triggering a persistent storage TTL bump (~30 days).
 const PERSISTENT_BUMP_THRESHOLD: u32 = 518_400;
+
+/// Number of ledgers to extend persistent storage lifetime when threshold is met (~31 days).
 const PERSISTENT_BUMP_AMOUNT: u32 = 535_680;
 
+// ============================================================================
+// Data Types & State Structures
+// ============================================================================
+
+/// Represents the lifecycle state of an escrowed task.
 #[contracttype]
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum TaskStatus {
+    /// Task created and funds locked in escrow awaiting execution and proof settlement.
     Pending = 0,
+    /// Task successfully settled with verified proof, reward released to recipient.
     Completed = 1,
+    /// Task cancelled by user, funds refunded to user available balance.
     Cancelled = 2,
 }
 
+/// Represents an on-chain escrowed task record.
 #[contracttype]
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Task {
+    /// Unique identifier symbol for the task.
     pub task_id: Symbol,
+    /// Stellar address of the user who commissioned the task.
     pub user: Address,
+    /// Category / type descriptor of the agent assigned (e.g., `coding`, `browser`, `email`).
     pub agent_type: Symbol,
+    /// Token amount locked in escrow for this task (in stroops / token base units).
     pub reward: i128,
+    /// Current lifecycle status of the task.
     pub status: TaskStatus,
 }
 
+/// Storage keys for indexing contract state.
 #[contracttype]
+#[derive(Clone)]
 enum DataKey {
+    /// Instance key storing the Stellar Asset Contract (SAC) token address.
     Token,
+    /// Instance key storing the linked `AgentRegistry` contract address.
     Registry,
+    /// Instance key storing the linked `TaskProof` contract address.
     ProofContract,
+    /// Persistent key storing boolean authorization status for an executor address.
     Executors(Address),
+    /// Persistent key storing available token balance for a user address.
     Balance(Address),
+    /// Persistent key storing count of active pending tasks for a user address.
     PendingTasks(Address),
+    /// Persistent key storing `Task` records indexed by task ID.
     Task(Symbol),
 }
 
+// ============================================================================
+// Error Codes
+// ============================================================================
+
+/// Error codes returned by the Task Escrow contract.
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum TaskEscrowError {
+    /// The contract has already been initialized with an admin address.
     AlreadyInitialized = 1,
+    /// A task with the specified task ID already exists in storage.
     TaskAlreadyExists = 2,
+    /// No task record found for the specified task ID.
     TaskNotFound = 3,
+    /// The specified reward or deposit amount is invalid (must be > 0).
     InvalidReward = 4,
+    /// The caller is not authorized to perform this operation.
     Unauthorized = 5,
+    /// The task is not in the required state (must be `Pending`).
     InvalidTaskState = 6,
+    /// An authorized executor is required to complete the task with executor payout.
     ExecutorRequired = 7,
+    /// No execution proof found for this task in the linked TaskProof contract.
     ProofRequired = 8,
+    /// Cryptographic proof hash verification failed against the submitted output hash.
     ProofVerificationFailed = 9,
+    /// User platform balance is insufficient for task creation or withdrawal.
     InsufficientBalance = 10,
+    /// User cannot withdraw funds while active pending tasks remain in escrow.
     ActiveTasksPending = 11,
 }
+
+// ============================================================================
+// Smart Contract Implementation
+// ============================================================================
 
 #[contract]
 pub struct TaskEscrowContract;
 
 #[contractimpl]
 impl TaskEscrowContract {
+    // ------------------------------------------------------------------------
+    // 1. Initialization & Configuration
+    // ------------------------------------------------------------------------
+
+    /// Initializes the Task Escrow contract with an administrator and payment token contract.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `admin` - The contract administrator address.
+    /// * `token_contract` - The SAC token address used for deposits and payouts.
+    ///
+    /// # Errors
+    /// * `TaskEscrowError::AlreadyInitialized` - If already initialized.
     pub fn init(env: Env, admin: Address, token_contract: Address) {
         if env.storage().instance().has(&symbol_short!("ADMIN")) {
             soroban_sdk::panic_with_error!(&env, TaskEscrowError::AlreadyInitialized);
@@ -77,6 +166,12 @@ impl TaskEscrowContract {
         extend_instance(&env);
     }
 
+    /// Sets or revokes executor authorization for completing tasks and receiving rewards.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `executor` - The executor address.
+    /// * `allowed` - `true` to grant executor privileges, `false` to revoke.
     pub fn set_executor(env: Env, executor: Address, allowed: bool) {
         let admin = read_admin(&env);
         admin.require_auth();
@@ -87,6 +182,12 @@ impl TaskEscrowContract {
         extend_persistent(&env, &DataKey::Executors(executor));
     }
 
+    /// Configures the linked `AgentRegistry` contract address for reputation updates.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `admin` - The contract administrator address.
+    /// * `registry_contract` - The `AgentRegistry` contract address.
     pub fn set_registry(env: Env, admin: Address, registry_contract: Address) {
         require_admin(&env, &admin);
         env.storage()
@@ -95,6 +196,12 @@ impl TaskEscrowContract {
         extend_instance(&env);
     }
 
+    /// Configures the linked `TaskProof` contract address for proof verification.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `admin` - The contract administrator address.
+    /// * `proof_contract` - The `TaskProof` contract address.
     pub fn set_proof_contract(env: Env, admin: Address, proof_contract: Address) {
         require_admin(&env, &admin);
         env.storage()
@@ -103,6 +210,11 @@ impl TaskEscrowContract {
         extend_instance(&env);
     }
 
+    /// Checks whether an address is an authorized executor.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `executor` - The address to query.
     pub fn is_executor(env: Env, executor: Address) -> bool {
         env.storage()
             .persistent()
@@ -110,6 +222,19 @@ impl TaskEscrowContract {
             .unwrap_or(false)
     }
 
+    // ------------------------------------------------------------------------
+    // 2. User Balance Management
+    // ------------------------------------------------------------------------
+
+    /// Deposits SAC tokens into the escrow contract to fund future task rewards.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `user` - The user depositing tokens.
+    /// * `amount` - Amount of tokens to deposit (must be > 0).
+    ///
+    /// # Errors
+    /// * `TaskEscrowError::InvalidReward` - If amount <= 0.
     pub fn deposit(env: Env, user: Address, amount: i128) {
         user.require_auth();
         ensure_positive_reward(&env, amount);
@@ -119,6 +244,18 @@ impl TaskEscrowContract {
         extend_instance(&env);
     }
 
+    /// Withdraws unused available tokens from the escrow platform back to the user's wallet.
+    ///
+    /// Withdrawal is only permitted if the user has no active pending tasks in escrow.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `user` - The user requesting withdrawal.
+    /// * `amount` - Amount of tokens to withdraw.
+    ///
+    /// # Errors
+    /// * `TaskEscrowError::ActiveTasksPending` - If user has pending tasks.
+    /// * `TaskEscrowError::InsufficientBalance` - If amount exceeds available balance.
     pub fn withdraw(env: Env, user: Address, amount: i128) {
         user.require_auth();
         ensure_positive_reward(&env, amount);
@@ -137,10 +274,31 @@ impl TaskEscrowContract {
         extend_instance(&env);
     }
 
+    /// Fetches the available unallocated platform token balance for a user.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `user` - The user address.
     pub fn get_balance(env: Env, user: Address) -> i128 {
         read_balance(&env, &user)
     }
 
+    // ------------------------------------------------------------------------
+    // 3. Escrow Task Lifecycle
+    // ------------------------------------------------------------------------
+
+    /// Creates a new task in escrow, locking the reward from the user's available balance.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `task_id` - Unique identifier symbol for the task.
+    /// * `user` - Address of the commissioning user.
+    /// * `agent_type` - Categorical symbol for the assigned agent (e.g., `coding`).
+    /// * `reward` - Reward amount in stroops to lock in escrow.
+    ///
+    /// # Errors
+    /// * `TaskEscrowError::TaskAlreadyExists` - If task_id is already used.
+    /// * `TaskEscrowError::InsufficientBalance` - If user balance < reward.
     pub fn create_task(env: Env, task_id: Symbol, user: Address, agent_type: Symbol, reward: i128) {
         read_admin(&env).require_auth();
         ensure_positive_reward(&env, reward);
@@ -170,6 +328,20 @@ impl TaskEscrowContract {
         extend_instance(&env);
     }
 
+    /// Completes an escrowed task, verifies execution proof, releases payment, and updates agent reputation.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `task_id` - Identifier symbol of the task to complete.
+    /// * `caller` - The caller address (task owner or authorized executor).
+    /// * `pay_executor` - `true` to pay the executor, `false` to release to user.
+    /// * `output_hash` - 32-byte SHA-256 hash of the execution output to verify.
+    ///
+    /// # Errors
+    /// * `TaskEscrowError::InvalidTaskState` - If task is not `Pending`.
+    /// * `TaskEscrowError::ExecutorRequired` - If pay_executor is true but caller is not authorized executor.
+    /// * `TaskEscrowError::ProofRequired` - If no proof submitted in TaskProof contract.
+    /// * `TaskEscrowError::ProofVerificationFailed` - If output_hash does not match proof hash.
     pub fn complete_task(
         env: Env,
         task_id: Symbol,
@@ -209,6 +381,18 @@ impl TaskEscrowContract {
         notify_registry(&env, &task.agent_type, true);
     }
 
+    /// Cancels a pending task, refunding the escrowed reward back to the user's available balance.
+    ///
+    /// Also reports a failure penalty to the agent registry.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `task_id` - Identifier symbol of the task to cancel.
+    /// * `caller` - The user address who created the task.
+    ///
+    /// # Errors
+    /// * `TaskEscrowError::Unauthorized` - If caller != task.user.
+    /// * `TaskEscrowError::InvalidTaskState` - If task is not `Pending`.
     pub fn cancel_task(env: Env, task_id: Symbol, caller: Address) {
         let key = DataKey::Task(task_id);
         let mut task = read_task(&env, &key);
@@ -230,14 +414,25 @@ impl TaskEscrowContract {
         notify_registry(&env, &task.agent_type, false);
     }
 
+    /// Retrieves an on-chain `Task` struct by its task ID.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `task_id` - Identifier symbol of the task.
     pub fn get_task(env: Env, task_id: Symbol) -> Task {
         read_task(&env, &DataKey::Task(task_id))
     }
 
+    // ------------------------------------------------------------------------
+    // 4. State & Configuration Getters
+    // ------------------------------------------------------------------------
+
+    /// Retrieves the contract administrator address.
     pub fn get_admin(env: Env) -> Address {
         read_admin(&env)
     }
 
+    /// Retrieves the SAC payment token contract address.
     pub fn get_token(env: Env) -> Address {
         env.storage()
             .instance()
@@ -245,29 +440,46 @@ impl TaskEscrowContract {
             .unwrap_or_else(|| soroban_sdk::panic_with_error!(&env, TaskEscrowError::Unauthorized))
     }
 
+    /// Retrieves the linked `AgentRegistry` contract address, if configured.
     pub fn get_registry(env: Env) -> Option<Address> {
         env.storage().instance().get(&DataKey::Registry)
     }
 
+    /// Retrieves the linked `TaskProof` contract address, if configured.
     pub fn get_proof_contract(env: Env) -> Option<Address> {
         env.storage().instance().get(&DataKey::ProofContract)
     }
 
+    // ------------------------------------------------------------------------
+    // 5. Governance & Contract Upgrades
+    // ------------------------------------------------------------------------
+
+    /// Upgrades the contract WASM bytecode to a new version.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban execution environment.
+    /// * `admin` - The contract administrator address.
+    /// * `new_wasm_hash` - The 32-byte SHA-256 hash of the installed WASM bytecode.
     pub fn upgrade(env: Env, admin: Address, new_wasm_hash: BytesN<32>) {
         require_admin(&env, &admin);
         env.deployer().update_current_contract_wasm(new_wasm_hash);
     }
 }
 
+// ============================================================================
+// Internal Helper Functions
+// ============================================================================
+
+/// Verifies that the provided address matches the stored administrator address.
 fn require_admin(env: &Env, admin: &Address) {
     let stored_admin = read_admin(env);
     if stored_admin != *admin {
         soroban_sdk::panic_with_error!(env, TaskEscrowError::Unauthorized);
     }
-
     admin.require_auth();
 }
 
+/// Retrieves the stored administrator address from instance storage.
 fn read_admin(env: &Env) -> Address {
     env.storage()
         .instance()
@@ -275,6 +487,7 @@ fn read_admin(env: &Env) -> Address {
         .unwrap_or_else(|| soroban_sdk::panic_with_error!(env, TaskEscrowError::Unauthorized))
 }
 
+/// Reads a `Task` record from persistent storage.
 fn read_task(env: &Env, key: &DataKey) -> Task {
     env.storage()
         .persistent()
@@ -282,6 +495,7 @@ fn read_task(env: &Env, key: &DataKey) -> Task {
         .unwrap_or_else(|| soroban_sdk::panic_with_error!(env, TaskEscrowError::TaskNotFound))
 }
 
+/// Reads a user's available token balance from persistent storage.
 fn read_balance(env: &Env, user: &Address) -> i128 {
     env.storage()
         .persistent()
@@ -289,12 +503,14 @@ fn read_balance(env: &Env, user: &Address) -> i128 {
         .unwrap_or(0)
 }
 
+/// Sets a user's available token balance in persistent storage and extends TTL.
 fn set_balance(env: &Env, user: &Address, balance: i128) {
     let key = DataKey::Balance(user.clone());
     env.storage().persistent().set(&key, &balance);
     extend_persistent(env, &key);
 }
 
+/// Reads the count of active pending tasks for a user from persistent storage.
 fn read_pending_tasks(env: &Env, user: &Address) -> i128 {
     env.storage()
         .persistent()
@@ -302,17 +518,20 @@ fn read_pending_tasks(env: &Env, user: &Address) -> i128 {
         .unwrap_or(0)
 }
 
+/// Sets the count of active pending tasks for a user in persistent storage and extends TTL.
 fn set_pending_tasks(env: &Env, user: &Address, pending_tasks: i128) {
     let key = DataKey::PendingTasks(user.clone());
     env.storage().persistent().set(&key, &pending_tasks);
     extend_persistent(env, &key);
 }
 
+/// Decrements the user's pending task counter by 1 (saturating at 0).
 fn decrement_pending_tasks(env: &Env, user: &Address) {
     let pending_tasks = read_pending_tasks(env, user);
     set_pending_tasks(env, user, pending_tasks.saturating_sub(1));
 }
 
+/// Calls `TaskProofContract.proof_exists(task_id)` via cross-contract invocation.
 fn require_proof_exists(env: &Env, task_id: &Symbol) {
     let proof_contract = env
         .storage()
@@ -331,6 +550,7 @@ fn require_proof_exists(env: &Env, task_id: &Symbol) {
     }
 }
 
+/// Calls `TaskProofContract.verify_proof(task_id, output_hash)` and panics if false.
 fn verify_proof_or_panic(env: &Env, task_id: &Symbol, output_hash: &BytesN<32>) {
     let proof_contract = env
         .storage()
@@ -355,18 +575,21 @@ fn verify_proof_or_panic(env: &Env, task_id: &Symbol, output_hash: &BytesN<32>) 
     }
 }
 
+/// Asserts that a token amount is strictly positive (> 0).
 fn ensure_positive_reward(env: &Env, reward: i128) {
     if reward <= 0 {
         soroban_sdk::panic_with_error!(env, TaskEscrowError::InvalidReward);
     }
 }
 
+/// Asserts that a task is currently in `Pending` status.
 fn ensure_pending(env: &Env, task: &Task) {
     if task.status != TaskStatus::Pending {
         soroban_sdk::panic_with_error!(env, TaskEscrowError::InvalidTaskState);
     }
 }
 
+/// Constructs a Soroban token client for SAC token transfers.
 fn token_client<'a>(env: &'a Env) -> token::Client<'a> {
     let token_address = env
         .storage()
@@ -376,6 +599,9 @@ fn token_client<'a>(env: &'a Env) -> token::Client<'a> {
     token::Client::new(env, &token_address)
 }
 
+/// Performs a cross-contract invocation to `AgentRegistry.update_reputation`.
+///
+/// Failure in the registry update is logged but does not revert token settlement.
 fn notify_registry(env: &Env, agent_type: &Symbol, success: bool) {
     let Some(registry_address) = env
         .storage()
@@ -405,6 +631,7 @@ fn notify_registry(env: &Env, agent_type: &Symbol, success: bool) {
     }
 }
 
+/// Maps categorical agent workload types to their registry agent IDs.
 fn map_agent_type_to_id(env: &Env, agent_type: &Symbol) -> Symbol {
     if *agent_type == Symbol::new(env, "github") {
         Symbol::new(env, "github_agent")
@@ -425,17 +652,23 @@ fn map_agent_type_to_id(env: &Env, agent_type: &Symbol) -> Symbol {
     }
 }
 
+/// Extends the TTL for instance storage if within the threshold.
 fn extend_instance(env: &Env) {
     env.storage()
         .instance()
         .extend_ttl(INSTANCE_BUMP_THRESHOLD, INSTANCE_BUMP_AMOUNT);
 }
 
+/// Extends the TTL for persistent storage key if within the threshold.
 fn extend_persistent(env: &Env, key: &DataKey) {
     env.storage()
         .persistent()
         .extend_ttl(key, PERSISTENT_BUMP_THRESHOLD, PERSISTENT_BUMP_AMOUNT);
 }
+
+// ============================================================================
+// Unit & Integration Tests
+// ============================================================================
 
 #[cfg(test)]
 mod tests {
