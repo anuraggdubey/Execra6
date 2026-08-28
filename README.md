@@ -42,19 +42,6 @@ Tested with **40+ early users**
 ---
 
 
-## Six Agents, One Surface
-
-| Agent | What it does |
-|:---:|:---|
-| **GitHub** | Connect repos, index source code, review architecture, and generate focused summaries |
-| **Coding** | Generate MVP-ready code artifacts with live preview and downloadable bundles |
-| **Document** | Parse PDFs, CSVs, JSON files into concise analysis your team can act on |
-| **Email** | Draft and send escrow-backed emails through a configured mailbox |
-| **Web Search** | Run live web research with source-backed summaries and related content |
-| **Browser** | Control a visible browser session and stream live execution logs |
-
----
-
 ## Community & Updates
 
 <p align="center">
@@ -102,6 +89,19 @@ Follow our official channel on X ([@Execra6](https://x.com/Execra6)) for live an
     <img src="./Screenshots/post3.png" alt="Execra Mainnet Launch Post" width="650" />
   </a>
 </p>
+
+---
+
+## Six Agents, One Surface
+
+| Agent | What it does |
+|:---:|:---|
+| **GitHub** | Connect repos, index source code, review architecture, and generate focused summaries |
+| **Coding** | Generate MVP-ready code artifacts with live preview and downloadable bundles |
+| **Document** | Parse PDFs, CSVs, JSON files into concise analysis your team can act on |
+| **Email** | Draft and send escrow-backed emails through a configured mailbox |
+| **Web Search** | Run live web research with source-backed summaries and related content |
+| **Browser** | Control a visible browser session and stream live execution logs |
 
 ---
 
