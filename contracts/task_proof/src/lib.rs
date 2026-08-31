@@ -33,6 +33,12 @@ const PERSISTENT_BUMP_THRESHOLD: u32 = 518_400;
 /// Number of ledgers to extend persistent storage lifetime when threshold is met (~31 days).
 const PERSISTENT_BUMP_AMOUNT: u32 = 535_680;
 
+/// Instance storage symbol for the administrator address.
+const ADMIN_KEY: soroban_sdk::Symbol = symbol_short!("ADMIN");
+
+/// Instance storage symbol for the linked escrow contract address.
+const ESCROW_KEY: soroban_sdk::Symbol = symbol_short!("ESCROW");
+
 // ============================================================================
 // Data Types & Storage Keys
 // ============================================================================
@@ -109,19 +115,14 @@ impl TaskProofContract {
     /// # Errors
     /// * `TaskProofError::AlreadyInitialized` - If already initialized.
     pub fn init(env: Env, admin: Address, task_escrow: Address) {
-        if env.storage().instance().has(&symbol_short!("ADMIN")) {
+        if env.storage().instance().has(&ADMIN_KEY) {
             soroban_sdk::panic_with_error!(&env, TaskProofError::AlreadyInitialized);
         }
 
         admin.require_auth();
-        env.storage().instance().set(&symbol_short!("ADMIN"), &admin);
-        env.storage()
-            .instance()
-            .set(&symbol_short!("ESCROW"), &task_escrow);
-        env.storage()
-            .instance()
-            .set(&DataKey::Executors, &Vec::<Address>::new(&env));
-        extend_instance(&env);
+        env.storage().instance().set(&ADMIN_KEY, &admin);
+        env.storage().instance().set(&ESCROW_KEY, &task_escrow);
+        write_executors(&env, &Vec::<Address>::new(&env));
     }
 
     // ------------------------------------------------------------------------
@@ -166,15 +167,8 @@ impl TaskProofContract {
             submitted_at: env.ledger().timestamp(),
         };
 
-        env.storage().persistent().set(&key, &proof);
-        extend_persistent(&env, &key);
-
-        // Append to agent secondary index for historical lookup
-        let agent_key = DataKey::AgentProofs(agent_id);
-        let mut proofs = read_agent_proofs(&env, &agent_key);
-        proofs.push_back(task_id);
-        env.storage().persistent().set(&agent_key, &proofs);
-        extend_persistent(&env, &agent_key);
+        write_proof(&env, &key, &proof);
+        append_agent_proof(&env, agent_id, task_id);
         extend_instance(&env);
     }
 
@@ -197,8 +191,7 @@ impl TaskProofContract {
         }
 
         proof.verified = true;
-        env.storage().persistent().set(&key, &proof);
-        extend_persistent(&env, &key);
+        write_proof(&env, &key, &proof);
         true
     }
 
@@ -217,7 +210,11 @@ impl TaskProofContract {
     /// * `env` - The Soroban execution environment.
     /// * `task_id` - Identifier symbol of the task.
     pub fn is_verified(env: Env, task_id: Symbol) -> bool {
-        match env.storage().persistent().get::<_, TaskProof>(&DataKey::Proof(task_id)) {
+        match env
+            .storage()
+            .persistent()
+            .get::<_, TaskProof>(&DataKey::Proof(task_id))
+        {
             Some(proof) => proof.verified,
             None => false,
         }
@@ -256,8 +253,7 @@ impl TaskProofContract {
         let mut executors = read_executors(&env);
         if !executors.contains(&executor) {
             executors.push_back(executor);
-            env.storage().instance().set(&DataKey::Executors, &executors);
-            extend_instance(&env);
+            write_executors(&env, &executors);
         }
     }
 
@@ -276,8 +272,7 @@ impl TaskProofContract {
                 updated.push_back(item);
             }
         }
-        env.storage().instance().set(&DataKey::Executors, &updated);
-        extend_instance(&env);
+        write_executors(&env, &updated);
     }
 
     /// Checks whether an address is an authorized executor.
@@ -322,7 +317,7 @@ fn require_admin(env: &Env, admin: &Address) {
 fn read_admin(env: &Env) -> Address {
     env.storage()
         .instance()
-        .get(&symbol_short!("ADMIN"))
+        .get(&ADMIN_KEY)
         .unwrap_or_else(|| soroban_sdk::panic_with_error!(env, TaskProofError::Unauthorized))
 }
 
@@ -334,6 +329,12 @@ fn read_executors(env: &Env) -> Vec<Address> {
         .unwrap_or_else(|| Vec::<Address>::new(env))
 }
 
+/// Writes the authorized executor list and refreshes instance storage TTL.
+fn write_executors(env: &Env, executors: &Vec<Address>) {
+    env.storage().instance().set(&DataKey::Executors, executors);
+    extend_instance(env);
+}
+
 /// Reads the list of task IDs executed by an agent from persistent storage.
 fn read_agent_proofs(env: &Env, key: &DataKey) -> Vec<Symbol> {
     env.storage()
@@ -342,12 +343,27 @@ fn read_agent_proofs(env: &Env, key: &DataKey) -> Vec<Symbol> {
         .unwrap_or_else(|| Vec::<Symbol>::new(env))
 }
 
+/// Appends a proof task ID to the agent secondary index.
+fn append_agent_proof(env: &Env, agent_id: Symbol, task_id: Symbol) {
+    let agent_key = DataKey::AgentProofs(agent_id);
+    let mut proofs = read_agent_proofs(env, &agent_key);
+    proofs.push_back(task_id);
+    env.storage().persistent().set(&agent_key, &proofs);
+    extend_persistent(env, &agent_key);
+}
+
 /// Reads a `TaskProof` record from persistent storage.
 fn read_proof(env: &Env, key: &DataKey) -> TaskProof {
     env.storage()
         .persistent()
         .get(key)
         .unwrap_or_else(|| soroban_sdk::panic_with_error!(env, TaskProofError::ProofNotFound))
+}
+
+/// Writes a proof record and refreshes its persistent storage TTL.
+fn write_proof(env: &Env, key: &DataKey, proof: &TaskProof) {
+    env.storage().persistent().set(key, proof);
+    extend_persistent(env, key);
 }
 
 /// Extends the TTL for instance storage if within the threshold.

@@ -46,6 +46,9 @@ const SUCCESS_INCREMENT: u32 = 10;
 /// Reputation points subtracted upon task failure or cancellation.
 const FAILURE_DECREMENT: u32 = 20;
 
+/// Instance storage symbol for the administrator address.
+const ADMIN_KEY: soroban_sdk::Symbol = symbol_short!("ADMIN");
+
 // ============================================================================
 // Data Types & Storage Keys
 // ============================================================================
@@ -125,16 +128,13 @@ impl AgentRegistryContract {
     /// # Errors
     /// * `AgentRegistryError::AlreadyInitialized` - If the contract has already been initialized.
     pub fn init(env: Env, admin: Address) {
-        if env.storage().instance().has(&symbol_short!("ADMIN")) {
+        if env.storage().instance().has(&ADMIN_KEY) {
             soroban_sdk::panic_with_error!(&env, AgentRegistryError::AlreadyInitialized);
         }
 
         admin.require_auth();
-        env.storage().instance().set(&symbol_short!("ADMIN"), &admin);
-        env.storage()
-            .instance()
-            .set(&DataKey::AuthorizedCallers, &Vec::<Address>::new(&env));
-        extend_instance(&env);
+        env.storage().instance().set(&ADMIN_KEY, &admin);
+        write_authorized_callers(&env, &Vec::<Address>::new(&env));
     }
 
     // ------------------------------------------------------------------------
@@ -178,8 +178,7 @@ impl AgentRegistryContract {
             registered_at: env.ledger().timestamp(),
         };
 
-        env.storage().persistent().set(&key, &agent);
-        extend_persistent(&env, &key);
+        write_agent(&env, &key, &agent);
         extend_instance(&env);
     }
 
@@ -237,16 +236,8 @@ impl AgentRegistryContract {
         let key = DataKey::Agent(agent_id);
         let mut agent = read_agent(&env, &key);
 
-        if success {
-            agent.total_tasks_completed = agent.total_tasks_completed.saturating_add(1);
-            agent.reputation_score = (agent.reputation_score.saturating_add(SUCCESS_INCREMENT)).min(MAX_REPUTATION);
-        } else {
-            agent.total_tasks_cancelled = agent.total_tasks_cancelled.saturating_add(1);
-            agent.reputation_score = agent.reputation_score.saturating_sub(FAILURE_DECREMENT);
-        }
-
-        env.storage().persistent().set(&key, &agent);
-        extend_persistent(&env, &key);
+        apply_reputation_result(&mut agent, success);
+        write_agent(&env, &key, &agent);
     }
 
     /// Fetches the full on-chain record of an agent.
@@ -293,10 +284,7 @@ impl AgentRegistryContract {
         }
 
         callers.push_back(caller);
-        env.storage()
-            .instance()
-            .set(&DataKey::AuthorizedCallers, &callers);
-        extend_instance(&env);
+        write_authorized_callers(&env, &callers);
     }
 
     /// Checks whether an address is an authorized reputation updater.
@@ -341,7 +329,7 @@ fn require_admin(env: &Env, admin: &Address) {
 fn read_admin(env: &Env) -> Address {
     env.storage()
         .instance()
-        .get(&symbol_short!("ADMIN"))
+        .get(&ADMIN_KEY)
         .unwrap_or_else(|| soroban_sdk::panic_with_error!(env, AgentRegistryError::Unauthorized))
 }
 
@@ -353,6 +341,14 @@ fn read_authorized_callers(env: &Env) -> Vec<Address> {
         .unwrap_or_else(|| Vec::<Address>::new(env))
 }
 
+/// Writes authorized reputation updaters and refreshes instance storage TTL.
+fn write_authorized_callers(env: &Env, callers: &Vec<Address>) {
+    env.storage()
+        .instance()
+        .set(&DataKey::AuthorizedCallers, callers);
+    extend_instance(env);
+}
+
 /// Reads an `Agent` record from persistent storage.
 fn read_agent(env: &Env, key: &DataKey) -> Agent {
     env.storage()
@@ -361,13 +357,32 @@ fn read_agent(env: &Env, key: &DataKey) -> Agent {
         .unwrap_or_else(|| soroban_sdk::panic_with_error!(env, AgentRegistryError::AgentNotFound))
 }
 
+/// Writes an agent record and refreshes its persistent storage TTL.
+fn write_agent(env: &Env, key: &DataKey, agent: &Agent) {
+    env.storage().persistent().set(key, agent);
+    extend_persistent(env, key);
+}
+
+/// Applies bounded reputation and task-counter updates for a completed outcome.
+fn apply_reputation_result(agent: &mut Agent, success: bool) {
+    if success {
+        agent.total_tasks_completed = agent.total_tasks_completed.saturating_add(1);
+        agent.reputation_score = agent
+            .reputation_score
+            .saturating_add(SUCCESS_INCREMENT)
+            .min(MAX_REPUTATION);
+    } else {
+        agent.total_tasks_cancelled = agent.total_tasks_cancelled.saturating_add(1);
+        agent.reputation_score = agent.reputation_score.saturating_sub(FAILURE_DECREMENT);
+    }
+}
+
 /// Updates the operational active state flag of an agent.
 fn set_active_state(env: &Env, agent_id: Symbol, is_active: bool) {
     let key = DataKey::Agent(agent_id);
     let mut agent = read_agent(env, &key);
     agent.is_active = is_active;
-    env.storage().persistent().set(&key, &agent);
-    extend_persistent(env, &key);
+    write_agent(env, &key, &agent);
 }
 
 /// Extends the TTL for instance storage if within the threshold.
@@ -493,7 +508,10 @@ mod tests {
             client.update_reputation(&caller, &Symbol::new(&env, "document_agent"), &false);
         }
 
-        assert_eq!(client.get_reputation(&Symbol::new(&env, "document_agent")), 0);
+        assert_eq!(
+            client.get_reputation(&Symbol::new(&env, "document_agent")),
+            0
+        );
     }
 
     #[test]
@@ -507,7 +525,10 @@ mod tests {
             client.update_reputation(&caller, &Symbol::new(&env, "websearch_agent"), &true);
         }
 
-        assert_eq!(client.get_reputation(&Symbol::new(&env, "websearch_agent")), 1000);
+        assert_eq!(
+            client.get_reputation(&Symbol::new(&env, "websearch_agent")),
+            1000
+        );
     }
 
     #[test]
@@ -544,7 +565,8 @@ mod tests {
         register_default_agent(&env, &client, &admin, "email_agent", "email");
         let unauthorized = Address::generate(&env);
 
-        let result = client.try_update_reputation(&unauthorized, &Symbol::new(&env, "email_agent"), &true);
+        let result =
+            client.try_update_reputation(&unauthorized, &Symbol::new(&env, "email_agent"), &true);
 
         assert!(matches!(
             result,
@@ -558,9 +580,17 @@ mod tests {
         register_default_agent(&env, &client, &admin, "browser_agent", "browser");
 
         client.deactivate_agent(&admin, &Symbol::new(&env, "browser_agent"));
-        assert!(!client.get_agent(&Symbol::new(&env, "browser_agent")).is_active);
+        assert!(
+            !client
+                .get_agent(&Symbol::new(&env, "browser_agent"))
+                .is_active
+        );
 
         client.reactivate_agent(&admin, &Symbol::new(&env, "browser_agent"));
-        assert!(client.get_agent(&Symbol::new(&env, "browser_agent")).is_active);
+        assert!(
+            client
+                .get_agent(&Symbol::new(&env, "browser_agent"))
+                .is_active
+        );
     }
 }

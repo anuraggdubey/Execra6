@@ -44,6 +44,9 @@ const PERSISTENT_BUMP_THRESHOLD: u32 = 518_400;
 /// Number of ledgers to extend persistent storage lifetime when threshold is met (~31 days).
 const PERSISTENT_BUMP_AMOUNT: u32 = 535_680;
 
+/// Instance storage symbol for the administrator address.
+const ADMIN_KEY: soroban_sdk::Symbol = symbol_short!("ADMIN");
+
 // ============================================================================
 // Data Types & State Structures
 // ============================================================================
@@ -152,14 +155,12 @@ impl TaskEscrowContract {
     /// # Errors
     /// * `TaskEscrowError::AlreadyInitialized` - If already initialized.
     pub fn init(env: Env, admin: Address, token_contract: Address) {
-        if env.storage().instance().has(&symbol_short!("ADMIN")) {
+        if env.storage().instance().has(&ADMIN_KEY) {
             soroban_sdk::panic_with_error!(&env, TaskEscrowError::AlreadyInitialized);
         }
 
         admin.require_auth();
-        env.storage()
-            .instance()
-            .set(&symbol_short!("ADMIN"), &admin);
+        env.storage().instance().set(&ADMIN_KEY, &admin);
         env.storage()
             .instance()
             .set(&DataKey::Token, &token_contract);
@@ -323,8 +324,7 @@ impl TaskEscrowContract {
 
         set_balance(&env, &user, balance - reward);
         set_pending_tasks(&env, &user, read_pending_tasks(&env, &user) + 1);
-        env.storage().persistent().set(&key, &task);
-        extend_persistent(&env, &key);
+        write_task(&env, &key, &task);
         extend_instance(&env);
     }
 
@@ -372,12 +372,11 @@ impl TaskEscrowContract {
             task.user.clone()
         };
 
-        task.status = TaskStatus::Completed;
-        token_client(&env).transfer(&env.current_contract_address(), &recipient, &task.reward);
-        decrement_pending_tasks(&env, &task.user);
-        env.storage().persistent().set(&key, &task);
-        extend_persistent(&env, &key);
         verify_proof_or_panic(&env, &task.task_id, &output_hash);
+        token_client(&env).transfer(&env.current_contract_address(), &recipient, &task.reward);
+        task.status = TaskStatus::Completed;
+        decrement_pending_tasks(&env, &task.user);
+        write_task(&env, &key, &task);
         notify_registry(&env, &task.agent_type, true);
     }
 
@@ -409,8 +408,7 @@ impl TaskEscrowContract {
             read_balance(&env, &task.user) + task.reward,
         );
         decrement_pending_tasks(&env, &task.user);
-        env.storage().persistent().set(&key, &task);
-        extend_persistent(&env, &key);
+        write_task(&env, &key, &task);
         notify_registry(&env, &task.agent_type, false);
     }
 
@@ -483,7 +481,7 @@ fn require_admin(env: &Env, admin: &Address) {
 fn read_admin(env: &Env) -> Address {
     env.storage()
         .instance()
-        .get(&symbol_short!("ADMIN"))
+        .get(&ADMIN_KEY)
         .unwrap_or_else(|| soroban_sdk::panic_with_error!(env, TaskEscrowError::Unauthorized))
 }
 
@@ -493,6 +491,12 @@ fn read_task(env: &Env, key: &DataKey) -> Task {
         .persistent()
         .get(key)
         .unwrap_or_else(|| soroban_sdk::panic_with_error!(env, TaskEscrowError::TaskNotFound))
+}
+
+/// Writes a task record and extends its persistent storage TTL.
+fn write_task(env: &Env, key: &DataKey, task: &Task) {
+    env.storage().persistent().set(key, task);
+    extend_persistent(env, key);
 }
 
 /// Reads a user's available token balance from persistent storage.
@@ -533,14 +537,8 @@ fn decrement_pending_tasks(env: &Env, user: &Address) {
 
 /// Calls `TaskProofContract.proof_exists(task_id)` via cross-contract invocation.
 fn require_proof_exists(env: &Env, task_id: &Symbol) {
-    let proof_contract = env
-        .storage()
-        .instance()
-        .get::<_, Address>(&DataKey::ProofContract)
-        .unwrap_or_else(|| soroban_sdk::panic_with_error!(env, TaskEscrowError::ProofRequired));
-
     let exists: bool = env.invoke_contract(
-        &proof_contract,
+        &read_proof_contract(env),
         &Symbol::new(env, "proof_exists"),
         Vec::from_array(env, [task_id.clone().into_val(env)]),
     );
@@ -552,14 +550,8 @@ fn require_proof_exists(env: &Env, task_id: &Symbol) {
 
 /// Calls `TaskProofContract.verify_proof(task_id, output_hash)` and panics if false.
 fn verify_proof_or_panic(env: &Env, task_id: &Symbol, output_hash: &BytesN<32>) {
-    let proof_contract = env
-        .storage()
-        .instance()
-        .get::<_, Address>(&DataKey::ProofContract)
-        .unwrap_or_else(|| soroban_sdk::panic_with_error!(env, TaskEscrowError::ProofRequired));
-
     let verified: bool = env.invoke_contract(
-        &proof_contract,
+        &read_proof_contract(env),
         &Symbol::new(env, "verify_proof"),
         Vec::from_array(
             env,
@@ -573,6 +565,14 @@ fn verify_proof_or_panic(env: &Env, task_id: &Symbol, output_hash: &BytesN<32>) 
     if !verified {
         soroban_sdk::panic_with_error!(env, TaskEscrowError::ProofVerificationFailed);
     }
+}
+
+/// Retrieves the configured proof contract or reports that proof settlement is unavailable.
+fn read_proof_contract(env: &Env) -> Address {
+    env.storage()
+        .instance()
+        .get::<_, Address>(&DataKey::ProofContract)
+        .unwrap_or_else(|| soroban_sdk::panic_with_error!(env, TaskEscrowError::ProofRequired))
 }
 
 /// Asserts that a token amount is strictly positive (> 0).
