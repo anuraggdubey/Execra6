@@ -8,7 +8,6 @@ type BrandLogoProps = {
     href?: string
     className?: string
     imageClassName?: string
-    priority?: boolean
 }
 
 export default function BrandLogo({

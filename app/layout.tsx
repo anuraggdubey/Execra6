@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/ThemeProvider"
 import { WalletProvider } from "@/lib/WalletContext"
 import AppShell from "@/components/layout/AppShell"
 import type { Metadata } from "next"
+import type { ReactNode } from "react"
 
 export const metadata: Metadata = {
   title: "Execra",
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: ReactNode
 }) {
   return (
     <html lang="en" suppressHydrationWarning>

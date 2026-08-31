@@ -28,7 +28,7 @@ export default function TopNavbar() {
     return (
         <header className="top-navbar sticky top-0 z-40 w-full px-4 sm:px-6">
             <div className="mx-auto flex min-h-[52px] w-full max-w-[1440px] flex-wrap items-center justify-between gap-3 py-2 sm:flex-nowrap sm:gap-6 sm:py-0">
-                <BrandLogo href="/" priority />
+                <BrandLogo href="/" />
 
                 <nav className="hidden items-center gap-8 lg:flex">
                     {NAV_ITEMS.map((item) => (

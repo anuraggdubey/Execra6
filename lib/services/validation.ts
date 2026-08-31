@@ -1,6 +1,13 @@
 // Execra Platform
 import { AgentExecutionError } from "@/lib/agents/shared"
-import type { AgentType, OnChainTaskStatus, TaskStatus } from "@/types/tasks"
+import {
+    AGENT_TYPES,
+    ON_CHAIN_TASK_STATUSES,
+    TASK_STATUSES,
+    type AgentType,
+    type OnChainTaskStatus,
+    type TaskStatus,
+} from "@/types/tasks"
 
 const WALLET_ADDRESS_REGEX = /^[A-Z2-7]{32,70}$/i
 
@@ -33,30 +40,27 @@ export function requireEmailAddress(value: unknown, fieldName: string) {
 }
 
 export function requireAgentType(value: unknown): AgentType {
-    if (value === "github" || value === "coding" || value === "document" || value === "email" || value === "search" || value === "browser") {
-        return value
+    const agentType = value as AgentType
+    if (typeof value === "string" && AGENT_TYPES.includes(agentType)) {
+        return agentType
     }
 
     throw new AgentExecutionError("INVALID_AGENT_TYPE", "A valid agent type is required.", 400)
 }
 
 export function requireTaskStatus(value: unknown): TaskStatus {
-    if (value === "pending" || value === "completed" || value === "failed") {
-        return value
+    const taskStatus = value as TaskStatus
+    if (typeof value === "string" && TASK_STATUSES.includes(taskStatus)) {
+        return taskStatus
     }
 
     throw new AgentExecutionError("INVALID_TASK_STATUS", "A valid task status is required.", 400)
 }
 
 export function requireOnChainTaskStatus(value: unknown): OnChainTaskStatus {
-    if (
-        value === "uninitialized" ||
-        value === "pending" ||
-        value === "completed" ||
-        value === "cancelled" ||
-        value === "failed"
-    ) {
-        return value
+    const onChainTaskStatus = value as OnChainTaskStatus
+    if (typeof value === "string" && ON_CHAIN_TASK_STATUSES.includes(onChainTaskStatus)) {
+        return onChainTaskStatus
     }
 
     throw new AgentExecutionError("INVALID_ONCHAIN_STATUS", "A valid on-chain task status is required.", 400)

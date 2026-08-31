@@ -1,8 +1,11 @@
 // Execra Platform
-export type AgentType = "github" | "coding" | "document" | "email" | "search" | "browser"
+export const AGENT_TYPES = ["github", "coding", "document", "email", "search", "browser"] as const
+export const TASK_STATUSES = ["pending", "completed", "failed"] as const
+export const ON_CHAIN_TASK_STATUSES = ["uninitialized", "pending", "completed", "cancelled", "failed"] as const
 
-export type TaskStatus = "pending" | "completed" | "failed"
-export type OnChainTaskStatus = "uninitialized" | "pending" | "completed" | "cancelled" | "failed"
+export type AgentType = (typeof AGENT_TYPES)[number]
+export type TaskStatus = (typeof TASK_STATUSES)[number]
+export type OnChainTaskStatus = (typeof ON_CHAIN_TASK_STATUSES)[number]
 export type FeeMode = "user" | "sponsored"
 
 export type TaskFeatureConfig = {

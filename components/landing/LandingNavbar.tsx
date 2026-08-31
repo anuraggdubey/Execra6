@@ -33,7 +33,7 @@ export default function LandingNavbar({
     return (
         <header className="top-navbar sticky top-0 z-40 w-full px-4 sm:px-6">
             <div className="mx-auto flex h-[64px] w-full max-w-[1440px] items-center justify-between gap-6">
-                <BrandLogo href="/" priority />
+                <BrandLogo href="/" />
 
                 <nav className="hidden items-center gap-9 lg:flex">
                     {NAV_ITEMS.map((item) => (

@@ -145,7 +145,7 @@ impl AgentRegistryContract {
     ///
     /// # Arguments
     /// * `env` - The Soroban execution environment.
-    /// * `admin` - The admin address authorising the registration.
+    /// * `admin` - The admin address authorizing the registration.
     /// * `agent_id` - Unique identifier symbol for the agent.
     /// * `agent_type` - Categorical symbol classifying agent workload (e.g. `coding`, `browser`).
     /// * `wallet_address` - The payout wallet address for the agent.
